@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { getAuth } from '@/lib/auth';
 import { dbConnect } from '@/lib/db/mongoose';
 import { setUserActiveTenant } from '@/lib/tenant/set-active-tenant';
+import { withTenant } from '@/lib/tenant/with-tenant';
 import { Tenant } from '@/models/tenant.model';
 import { Membership } from '@/models/membership.model';
 import { seedSystemAccounts } from '@/lib/services/tenant.service';
@@ -14,6 +15,15 @@ const createTenantSchema = z.object({
     .min(2)
     .max(60)
     .regex(/^[a-z0-9-]+$/, 'lowercase letters, numbers and dashes only'),
+});
+
+export const GET = withTenant(async (_req, ctx) => {
+  const memberships = await Membership.find({ userId: ctx.userId }).lean();
+  const tenantIds = memberships.map((m) => m.tenantId);
+  const tenants = await Tenant.find({ _id: { $in: tenantIds } })
+    .sort({ createdAt: 1 })
+    .lean();
+  return NextResponse.json(tenants);
 });
 
 export async function POST(req: NextRequest) {
@@ -46,10 +56,7 @@ export async function POST(req: NextRequest) {
     role: 'owner',
   });
 
-  // Seed chart of accounts so the webhook can post balanced entries.
   await seedSystemAccounts(tenantId);
-
-  // Flip the user's activeTenantId so withTenant accepts the next request.
   await setUserActiveTenant(session.user.id, tenantId);
 
   return NextResponse.json({ tenant: tenant.toObject() }, { status: 201 });

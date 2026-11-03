@@ -2,6 +2,9 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
+import { Search } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Kbd } from '@/components/ui/kbd';
 import {
   CommandDialog,
   CommandEmpty,
@@ -33,7 +36,6 @@ export function CommandPalette() {
 
   React.useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      // Cmd/Ctrl+K always toggles the palette, even from inputs.
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setOpen((prev) => !prev);
@@ -47,7 +49,6 @@ export function CommandPalette() {
       const now = Date.now();
       const key = e.key.toLowerCase();
 
-      // Second key of a chord.
       if (chordRef.current && now - chordRef.current.at < CHORD_TIMEOUT_MS) {
         const first = chordRef.current.key;
         chordRef.current = null;
@@ -62,10 +63,7 @@ export function CommandPalette() {
         return;
       }
 
-      // First key of a chord.
-      if (key === 'g') {
-        chordRef.current = { key: 'g', at: now };
-      }
+      if (key === 'g') chordRef.current = { key: 'g', at: now };
     };
 
     document.addEventListener('keydown', onKeyDown);
@@ -80,34 +78,37 @@ export function CommandPalette() {
   };
 
   return (
-    <CommandDialog open={open} onOpenChange={setOpen}>
-      <CommandInput placeholder="Type a command or search…" autoFocus />
-      <CommandList>
-        <CommandEmpty>No results.</CommandEmpty>
-        <CommandGroup heading="Navigation">
-          <CommandItem
-            onSelect={() => {
-              go('/projects');
-            }}
-          >
-            Projects <CommandShortcut>G P</CommandShortcut>
-          </CommandItem>
-          <CommandItem
-            onSelect={() => {
-              go('/time');
-            }}
-          >
-            Time entries <CommandShortcut>G T</CommandShortcut>
-          </CommandItem>
-          <CommandItem
-            onSelect={() => {
-              go('/invoices');
-            }}
-          >
-            Invoices <CommandShortcut>G I</CommandShortcut>
-          </CommandItem>
-        </CommandGroup>
-      </CommandList>
-    </CommandDialog>
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => { setOpen(true); }}
+        className="text-muted-foreground hidden gap-2 sm:inline-flex"
+        aria-label="Open command palette"
+      >
+        <Search className="size-3.5" />
+        <span>Search</span>
+        <Kbd className="ml-2">⌘K</Kbd>
+      </Button>
+
+      <CommandDialog open={open} onOpenChange={setOpen}>
+        <CommandInput placeholder="Type a command or search…" autoFocus />
+        <CommandList>
+          <CommandEmpty>No results.</CommandEmpty>
+          <CommandGroup heading="Navigation">
+            <CommandItem onSelect={() => { go('/projects'); }}>
+              Projects <CommandShortcut>G P</CommandShortcut>
+            </CommandItem>
+            <CommandItem onSelect={() => { go('/time'); }}>
+              Time entries <CommandShortcut>G T</CommandShortcut>
+            </CommandItem>
+            <CommandItem onSelect={() => { go('/invoices'); }}>
+              Invoices <CommandShortcut>G I</CommandShortcut>
+            </CommandItem>
+          </CommandGroup>
+        </CommandList>
+      </CommandDialog>
+    </>
   );
 }
