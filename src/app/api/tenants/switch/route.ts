@@ -1,8 +1,8 @@
-import mongoose from 'mongoose';
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getAuth } from '@/lib/auth';
 import { dbConnect } from '@/lib/db/mongoose';
+import { setUserActiveTenant } from '@/lib/tenant/set-active-tenant';
 import { Membership } from '@/models/membership.model';
 
 const switchSchema = z.object({ tenantId: z.string().min(1) });
@@ -32,10 +32,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Not a member of that tenant' }, { status: 403 });
   }
 
-  await mongoose.connection.collection('user').updateOne(
-    { _id: new mongoose.Types.ObjectId(session.user.id) },
-    { $set: { activeTenantId: tenantId } },
-  );
+  await setUserActiveTenant(session.user.id, tenantId);
 
   return NextResponse.json({ ok: true, tenantId });
 }

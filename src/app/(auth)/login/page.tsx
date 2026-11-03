@@ -41,7 +41,7 @@ export default function LoginPage() {
     >
       <div className="space-y-1">
         <h1 className="text-xl font-semibold">Sign in</h1>
-        <p className="text-sm text-muted-foreground">Welcome back.</p>
+        <p className="text-muted-foreground text-sm">Welcome back.</p>
       </div>
 
       <Input
@@ -69,7 +69,7 @@ export default function LoginPage() {
         {pending ? 'Signing in…' : 'Sign in'}
       </Button>
 
-      <p className="text-center text-sm text-muted-foreground">
+      <p className="text-muted-foreground text-center text-sm">
         No account?{' '}
         <Link href="/signup" className="underline underline-offset-4">
           Create one

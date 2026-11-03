@@ -14,7 +14,6 @@ async function allocateEntryNumber(tenantId: string): Promise<number> {
     { upsert: true, returnDocument: 'after' },
   ).lean();
 
-  if (!doc) throw new Error('Failed to allocate journal entry number');
   return doc.nextNumber;
 }
 

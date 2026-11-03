@@ -42,9 +42,7 @@ export default function SignupPage() {
     >
       <div className="space-y-1">
         <h1 className="text-xl font-semibold">Create your account</h1>
-        <p className="text-sm text-muted-foreground">
-          Then set up your workspace.
-        </p>
+        <p className="text-muted-foreground text-sm">Then set up your workspace.</p>
       </div>
 
       <Input
@@ -82,7 +80,7 @@ export default function SignupPage() {
         {pending ? 'Creating account…' : 'Create account'}
       </Button>
 
-      <p className="text-center text-sm text-muted-foreground">
+      <p className="text-muted-foreground text-center text-sm">
         Already have an account?{' '}
         <Link href="/login" className="underline underline-offset-4">
           Sign in

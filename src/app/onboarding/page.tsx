@@ -36,9 +36,7 @@ export default function OnboardingPage() {
     <main className="mx-auto max-w-md space-y-6 p-6">
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold">Create your workspace</h1>
-        <p className="text-sm text-muted-foreground">
-          You can invite teammates once it exists.
-        </p>
+        <p className="text-muted-foreground text-sm">You can invite teammates once it exists.</p>
       </div>
 
       <form

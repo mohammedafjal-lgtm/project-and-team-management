@@ -32,8 +32,7 @@ export function withTenant(
     }
 
     const userId = session.user.id;
-    const activeTenantId =
-      (session.user as { activeTenantId?: string }).activeTenantId ?? '';
+    const activeTenantId = (session.user as { activeTenantId?: string }).activeTenantId ?? '';
 
     if (!activeTenantId) {
       return NextResponse.json({ error: 'No active tenant' }, { status: 403 });

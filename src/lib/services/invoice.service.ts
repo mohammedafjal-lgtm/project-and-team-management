@@ -12,9 +12,5 @@ export async function allocateInvoiceNumber(tenantId: string): Promise<number> {
     { upsert: true, returnDocument: 'after' },
   ).lean();
 
-  if (!doc) {
-    throw new Error('Failed to allocate invoice number');
-  }
-
   return doc.nextNumber;
 }

@@ -80,9 +80,7 @@ export default function InvoicesPage() {
                 value={line.description}
                 onChange={(e) => {
                   const v = e.target.value;
-                  setLines((prev) =>
-                    prev.map((x, j) => (j === i ? { ...x, description: v } : x)),
-                  );
+                  setLines((prev) => prev.map((x, j) => (j === i ? { ...x, description: v } : x)));
                 }}
                 placeholder="Description"
               />
@@ -90,9 +88,7 @@ export default function InvoicesPage() {
                 value={line.quantity}
                 onChange={(e) => {
                   const v = e.target.value;
-                  setLines((prev) =>
-                    prev.map((x, j) => (j === i ? { ...x, quantity: v } : x)),
-                  );
+                  setLines((prev) => prev.map((x, j) => (j === i ? { ...x, quantity: v } : x)));
                 }}
                 placeholder="Qty"
                 inputMode="decimal"
@@ -103,9 +99,7 @@ export default function InvoicesPage() {
                 onChange={(e) => {
                   const v = e.target.value;
                   setLines((prev) =>
-                    prev.map((x, j) =>
-                      j === i ? { ...x, unitAmountRupees: v } : x,
-                    ),
+                    prev.map((x, j) => (j === i ? { ...x, unitAmountRupees: v } : x)),
                   );
                 }}
                 placeholder="₹ each"
@@ -142,20 +136,18 @@ export default function InvoicesPage() {
                 <div className="text-sm font-medium">
                   #{inv.invoiceNumber} · {inv.clientName}
                 </div>
-                <div className="text-xs text-muted-foreground">
+                <div className="text-muted-foreground text-xs">
                   {inv.lines.length} line{inv.lines.length === 1 ? '' : 's'}
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <span className="text-sm">
-                  ₹{(inv.totalCents / 100).toLocaleString('en-IN')}
-                </span>
-                <span className="text-xs text-muted-foreground">{inv.status}</span>
+                <span className="text-sm">₹{(inv.totalCents / 100).toLocaleString('en-IN')}</span>
+                <span className="text-muted-foreground text-xs">{inv.status}</span>
               </div>
             </li>
           ))}
           {invoices?.length === 0 && (
-            <li className="p-3 text-sm text-muted-foreground">No invoices yet.</li>
+            <li className="text-muted-foreground p-3 text-sm">No invoices yet.</li>
           )}
         </ul>
       )}

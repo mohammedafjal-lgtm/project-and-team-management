@@ -17,9 +17,7 @@ import { useSession } from '@/lib/auth-client';
  */
 export function useActiveTenant() {
   const { data: session, isPending } = useSession();
-  const activeTenantId = (
-    session?.user as { activeTenantId?: string } | undefined
-  )?.activeTenantId;
+  const activeTenantId = (session?.user as { activeTenantId?: string } | undefined)?.activeTenantId;
 
   return { activeTenantId, session, isPending };
 }

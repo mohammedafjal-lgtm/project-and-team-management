@@ -54,11 +54,11 @@ export default function ProjectsPage() {
           {projects?.map((p) => (
             <li key={p._id} className="flex items-center justify-between p-3">
               <span>{p.name}</span>
-              <span className="text-xs text-muted-foreground">{p.status}</span>
+              <span className="text-muted-foreground text-xs">{p.status}</span>
             </li>
           ))}
           {projects?.length === 0 && (
-            <li className="p-3 text-sm text-muted-foreground">No projects yet.</li>
+            <li className="text-muted-foreground p-3 text-sm">No projects yet.</li>
           )}
         </ul>
       )}

@@ -37,10 +37,7 @@ function deriveEventId(req: NextRequest, rawBody: string, event: RazorpayWebhook
   return `${event.event}:${paymentId}:${bodyHash}`;
 }
 
-async function postPaymentJournalEntry(
-  event: RazorpayWebhook,
-  tenantId: string,
-): Promise<void> {
+async function postPaymentJournalEntry(event: RazorpayWebhook, tenantId: string): Promise<void> {
   const payment = event.payload?.payment?.entity;
   const amount = payment?.amount;
   if (typeof amount !== 'number' || amount <= 0) return;
@@ -74,10 +71,7 @@ export async function POST(req: NextRequest) {
   const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
 
   if (!secret) {
-    return NextResponse.json(
-      { error: 'Webhook secret not configured' },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: 'Webhook secret not configured' }, { status: 500 });
   }
 
   if (!verifySignature(rawBody, signature, secret)) {

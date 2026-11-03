@@ -24,9 +24,7 @@ export function tenantPlugin(schema: Schema) {
       const filter = this.getFilter() as { tenantId?: string };
 
       if (filter.tenantId && filter.tenantId !== tenantId) {
-        throw new Error(
-          'CROSS_TENANT_QUERY: Query tenantId does not match current context',
-        );
+        throw new Error('CROSS_TENANT_QUERY: Query tenantId does not match current context');
       }
       this.where({ tenantId });
     });

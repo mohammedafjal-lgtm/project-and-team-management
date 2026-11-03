@@ -6,10 +6,12 @@ import { withTenant } from '@/lib/tenant/with-tenant';
  * to decide whether to render write UI. `withTenant` already validated the
  * membership, so this is just a projection of the resolved context.
  */
-export const GET = withTenant(async (_req, ctx) => {
-  return NextResponse.json({
-    userId: ctx.userId,
-    tenantId: ctx.tenantId,
-    role: ctx.role,
-  });
-});
+export const GET = withTenant((_req, ctx) =>
+  Promise.resolve(
+    NextResponse.json({
+      userId: ctx.userId,
+      tenantId: ctx.tenantId,
+      role: ctx.role,
+    }),
+  ),
+);

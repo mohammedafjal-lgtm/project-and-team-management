@@ -57,7 +57,7 @@ export default function TimePage() {
             onChange={(e) => {
               setProjectId(e.target.value);
             }}
-            className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm"
+            className="border-input h-8 rounded-lg border bg-transparent px-2.5 text-sm"
           >
             <option value="">Select project…</option>
             {projects?.map((p) => (
@@ -96,17 +96,17 @@ export default function TimePage() {
             <li key={e._id} className="flex items-center justify-between p-3">
               <div>
                 <div className="text-sm">{e.description || '(no description)'}</div>
-                <div className="text-xs text-muted-foreground">
+                <div className="text-muted-foreground text-xs">
                   {e.workDate} · {e.workTimezone}
                 </div>
               </div>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-muted-foreground text-xs">
                 {e.billable ? 'Billable' : 'Non-billable'}
               </span>
             </li>
           ))}
           {entries?.length === 0 && (
-            <li className="p-3 text-sm text-muted-foreground">No entries yet.</li>
+            <li className="text-muted-foreground p-3 text-sm">No entries yet.</li>
           )}
         </ul>
       )}

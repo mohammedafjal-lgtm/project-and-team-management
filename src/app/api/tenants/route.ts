@@ -1,8 +1,8 @@
-import mongoose from 'mongoose';
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getAuth } from '@/lib/auth';
 import { dbConnect } from '@/lib/db/mongoose';
+import { setUserActiveTenant } from '@/lib/tenant/set-active-tenant';
 import { Tenant } from '@/models/tenant.model';
 import { Membership } from '@/models/membership.model';
 import { seedSystemAccounts } from '@/lib/services/tenant.service';
@@ -50,10 +50,7 @@ export async function POST(req: NextRequest) {
   await seedSystemAccounts(tenantId);
 
   // Flip the user's activeTenantId so withTenant accepts the next request.
-  await mongoose.connection.collection('user').updateOne(
-    { _id: new mongoose.Types.ObjectId(session.user.id) },
-    { $set: { activeTenantId: tenantId } },
-  );
+  await setUserActiveTenant(session.user.id, tenantId);
 
   return NextResponse.json({ tenant: tenant.toObject() }, { status: 201 });
 }

@@ -21,6 +21,17 @@ async function buildAuth() {
         }),
       },
     }),
+    // Without this, getSession strips activeTenantId even when it exists on
+    // the user document — the adapter only maps fields from this schema.
+    user: {
+      additionalFields: {
+        activeTenantId: {
+          type: 'string',
+          required: false,
+          input: false,
+        },
+      },
+    },
     emailAndPassword: { enabled: true },
     plugins: [nextCookies()],
   });

@@ -21,15 +21,15 @@ Every action is reachable by keyboard. The command palette (`⌘K`) is the prima
 
 **Core modules:**
 
-| Module | What it does |
-|---|---|
-| **Projects & tasks** | Create projects, assign tasks, track status and due dates |
-| **Time logging** | Manual entries and a start/stop timer, per-project, with billable flags |
-| **Timesheets** | Weekly views with timezone-correct day bucketing and approval workflow |
-| **Invoices** | Draft invoices from approved billable time, atomic numbering, PDF export |
-| **Bookkeeping** | Double-entry general ledger, chart of accounts, trial balance, P&L |
-| **Billing** | Razorpay subscriptions with order-based fallback for RBI e-mandate restrictions |
-| **Teams** | Multi-tenant organizations, invitations, role-based access (Owner/Admin/Member/Viewer) |
+| Module               | What it does                                                                           |
+| -------------------- | -------------------------------------------------------------------------------------- |
+| **Projects & tasks** | Create projects, assign tasks, track status and due dates                              |
+| **Time logging**     | Manual entries and a start/stop timer, per-project, with billable flags                |
+| **Timesheets**       | Weekly views with timezone-correct day bucketing and approval workflow                 |
+| **Invoices**         | Draft invoices from approved billable time, atomic numbering, PDF export               |
+| **Bookkeeping**      | Double-entry general ledger, chart of accounts, trial balance, P&L                     |
+| **Billing**          | Razorpay subscriptions with order-based fallback for RBI e-mandate restrictions        |
+| **Teams**            | Multi-tenant organizations, invitations, role-based access (Owner/Admin/Member/Viewer) |
 
 ---
 
@@ -46,25 +46,26 @@ Every action is reachable by keyboard. The command palette (`⌘K`) is the prima
 
 ## Tech stack
 
-| Layer | Choice | Why |
-|---|---|---|
-| Framework | **Next.js 16** (App Router, React 19, Server Components) | Single deployable; Route Handlers own the API surface |
-| Language | **TypeScript** (strict, `noUncheckedIndexedAccess`) | Financial code without type safety is a liability |
-| Database | **MongoDB + Mongoose 9** | Flexible schema for evolving project/task models |
-| Auth | **Better Auth** with `better-auth-mongoose` | Real Mongoose models; session `user.id` is a stable string |
-| Payments | **Razorpay** (subscriptions + one-time orders) | India-first billing with RBI e-mandate compliance |
-| Validation | **Zod** | One schema for runtime validation and static types |
-| Server state | **TanStack Query v5** | Cache invalidation, optimistic updates, hydration |
-| HTTP | **Axios** (single instance, typed interceptors) | Predictable error normalisation |
-| UI | **Base UI** primitives via **shadcn/ui** | Composable, accessible, themeable |
-| Command palette | **cmdk** | The de facto standard; ships with shadcn |
-| Toasts | **Sonner** | Minimal, accessible notifications |
-| Lint | **ESLint 9 flat config** + `typescript-eslint` strict | Type-aware rules catch tenant leaks and unsafe casts |
-| Format | **Prettier** + `prettier-plugin-tailwindcss` | Consistent formatting; sorted Tailwind classes |
+| Layer           | Choice                                                   | Why                                                        |
+| --------------- | -------------------------------------------------------- | ---------------------------------------------------------- |
+| Framework       | **Next.js 16** (App Router, React 19, Server Components) | Single deployable; Route Handlers own the API surface      |
+| Language        | **TypeScript** (strict, `noUncheckedIndexedAccess`)      | Financial code without type safety is a liability          |
+| Database        | **MongoDB + Mongoose 9**                                 | Flexible schema for evolving project/task models           |
+| Auth            | **Better Auth** with `better-auth-mongoose`              | Real Mongoose models; session `user.id` is a stable string |
+| Payments        | **Razorpay** (subscriptions + one-time orders)           | India-first billing with RBI e-mandate compliance          |
+| Validation      | **Zod**                                                  | One schema for runtime validation and static types         |
+| Server state    | **TanStack Query v5**                                    | Cache invalidation, optimistic updates, hydration          |
+| HTTP            | **Axios** (single instance, typed interceptors)          | Predictable error normalisation                            |
+| UI              | **Base UI** primitives via **shadcn/ui**                 | Composable, accessible, themeable                          |
+| Command palette | **cmdk**                                                 | The de facto standard; ships with shadcn                   |
+| Toasts          | **Sonner**                                               | Minimal, accessible notifications                          |
+| Lint            | **ESLint 9 flat config** + `typescript-eslint` strict    | Type-aware rules catch tenant leaks and unsafe casts       |
+| Format          | **Prettier** + `prettier-plugin-tailwindcss`             | Consistent formatting; sorted Tailwind classes             |
 
 ---
 
 ## Architecture
+
 ```
 .
 ├── .env
