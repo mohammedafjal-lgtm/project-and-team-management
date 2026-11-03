@@ -65,6 +65,7 @@ Every action is reachable by keyboard. The command palette (`⌘K`) is the prima
 ---
 
 ## Architecture
+```
 .
 ├── .env
 ├── .env.example
@@ -160,4 +161,4 @@ Every action is reachable by keyboard. The command palette (`⌘K`) is the prima
 │       └── mongoose-tenant.ts
 ├── tsconfig.json
 └── tsconfig.tsbuildinfo
-
+```
