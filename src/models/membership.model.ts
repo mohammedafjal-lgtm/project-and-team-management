@@ -1,5 +1,4 @@
 import mongoose, { Schema, type Model } from 'mongoose';
-import { tenantPlugin } from '@/plugins/mongoose-tenant';
 
 export type MembershipRole = 'owner' | 'admin' | 'member' | 'viewer';
 
@@ -25,7 +24,10 @@ const MembershipSchema = new Schema<MembershipDoc>(
 );
 
 MembershipSchema.index({ userId: 1, tenantId: 1 }, { unique: true });
-MembershipSchema.plugin(tenantPlugin);
+
+// NOTE: deliberately does NOT use tenantPlugin. Membership is looked up
+// during tenant bootstrap (in withTenant) BEFORE any tenant context exists.
+// Every query against this collection must filter tenantId explicitly.
 
 export const Membership: Model<MembershipDoc> =
   (mongoose.models.Membership as Model<MembershipDoc> | undefined) ??

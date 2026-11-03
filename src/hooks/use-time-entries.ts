@@ -16,13 +16,14 @@ export interface TimeEntry {
   workTimezone: string;
 }
 
-export function useTimeEntries(tenantId: string) {
+export function useTimeEntries(tenantId: string | undefined) {
   return useQuery({
-    queryKey: queryKeys.timeEntries(tenantId),
+    queryKey: queryKeys.timeEntries(tenantId ?? ''),
     queryFn: async () => {
       const { data } = await api.get<TimeEntry[]>('/time-entries');
       return data;
     },
+    enabled: !!tenantId,
   });
 }
 

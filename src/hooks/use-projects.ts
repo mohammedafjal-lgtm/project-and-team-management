@@ -12,13 +12,14 @@ export interface Project {
   createdAt: string;
 }
 
-export function useProjects(tenantId: string) {
+export function useProjects(tenantId: string | undefined) {
   return useQuery({
-    queryKey: queryKeys.projects(tenantId),
+    queryKey: queryKeys.projects(tenantId ?? ''),
     queryFn: async () => {
       const { data } = await api.get<Project[]>('/projects');
       return data;
     },
+    enabled: !!tenantId,
   });
 }
 

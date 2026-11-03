@@ -7,7 +7,9 @@ export interface InvoiceCounterDoc {
 
 const InvoiceCounterSchema = new Schema<InvoiceCounterDoc>({
   tenantId: { type: String, required: true, unique: true },
-  nextNumber: { type: Number, required: true, default: 1 },
+  // 0 so that $inc starts at 1 on first call. Do NOT use default: 1 —
+  // combined with $inc that produces 2 on the first invoice.
+  nextNumber: { type: Number, required: true, default: 0 },
 });
 
 export const InvoiceCounter: Model<InvoiceCounterDoc> =

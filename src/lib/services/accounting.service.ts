@@ -1,5 +1,5 @@
-import { type QueryFilter } from 'mongoose';
-import { JournalEntry, type JournalEntryDoc } from '@/models/journal-entry.model';
+import { JournalEntry } from '@/models/journal-entry.model';
+import { JournalCounter } from '@/models/journal-counter.model';
 
 export interface JournalLineInput {
   accountId: string;
@@ -7,6 +7,23 @@ export interface JournalLineInput {
   creditCents: number;
 }
 
+async function allocateEntryNumber(tenantId: string): Promise<number> {
+  const doc = await JournalCounter.findOneAndUpdate(
+    { tenantId },
+    { $inc: { nextNumber: 1 } },
+    { upsert: true, returnDocument: 'after' },
+  ).lean();
+
+  if (!doc) throw new Error('Failed to allocate journal entry number');
+  return doc.nextNumber;
+}
+
+/**
+ * Posts a balanced journal entry. Invariants:
+ *   - Σdebits === Σcredits (in cents)
+ *   - entryNumber is unique per tenant, allocated atomically
+ *   - status is 'posted' with postedAt stamped on write
+ */
 export async function postJournalEntry(params: {
   tenantId: string;
   entryDate: Date;
@@ -24,9 +41,7 @@ export async function postJournalEntry(params: {
     );
   }
 
-  const filter: QueryFilter<JournalEntryDoc> = { tenantId: params.tenantId };
-  const last = await JournalEntry.findOne(filter).sort({ entryNumber: -1 }).lean();
-  const entryNumber = (last?.entryNumber ?? 0) + 1;
+  const entryNumber = await allocateEntryNumber(params.tenantId);
 
   return JournalEntry.create({
     ...params,

@@ -1,10 +1,8 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { type QueryFilter } from 'mongoose';
-import { auth } from '@/lib/auth';
+import { getAuth } from '@/lib/auth';
 import { dbConnect } from '@/lib/db/mongoose';
-import { Membership, type MembershipDoc } from '@/models/membership.model';
+import { Membership, type MembershipRole } from '@/models/membership.model';
 import { tenantStorage } from './tenant-context';
-import { type MembershipRole } from '@/models/membership.model';
 
 export interface TenantContext {
   tenantId: string;
@@ -12,11 +10,21 @@ export interface TenantContext {
   role: MembershipRole;
 }
 
+interface WithTenantOptions {
+  /**
+   * If provided, the request is rejected with 403 unless the caller's role
+   * is in this list. Omit for "any authenticated member of the active tenant".
+   */
+  roles?: readonly MembershipRole[];
+}
+
 export function withTenant(
   handler: (req: NextRequest, ctx: TenantContext) => Promise<Response>,
+  options: WithTenantOptions = {},
 ) {
   return async (req: NextRequest) => {
     await dbConnect();
+    const auth = await getAuth();
 
     const session = await auth.api.getSession({ headers: req.headers });
     if (!session) {
@@ -31,8 +39,12 @@ export function withTenant(
       return NextResponse.json({ error: 'No active tenant' }, { status: 403 });
     }
 
-    const filter: QueryFilter<MembershipDoc> = { userId, tenantId: activeTenantId };
-    const membership = await Membership.findOne(filter).lean();
+    // Membership intentionally has NO tenantPlugin — this lookup runs before
+    // any tenant context exists. Every other model enforces scoping via plugin.
+    const membership = await Membership.findOne({
+      userId,
+      tenantId: activeTenantId,
+    }).lean();
 
     if (!membership) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -41,8 +53,13 @@ export function withTenant(
     const tenantId = membership.tenantId;
     const role = membership.role;
 
-    return tenantStorage.run({ tenantId }, () =>
-      handler(req, { tenantId, userId, role }),
-    );
+    if (options.roles && !options.roles.includes(role)) {
+      return NextResponse.json(
+        { error: `Requires one of: ${options.roles.join(', ')}` },
+        { status: 403 },
+      );
+    }
+
+    return tenantStorage.run({ tenantId }, () => handler(req, { tenantId, userId, role }));
   };
 }

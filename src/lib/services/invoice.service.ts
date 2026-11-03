@@ -1,14 +1,20 @@
-import { type QueryFilter } from 'mongoose';
-import { InvoiceCounter, type InvoiceCounterDoc } from '@/models/invoice-counter.model';
+import { InvoiceCounter } from '@/models/invoice-counter.model';
 
+/**
+ * Atomically reserves the next invoice number for a tenant.
+ * First call returns 1. Concurrent calls return strictly-increasing unique
+ * numbers (no read-then-write race).
+ */
 export async function allocateInvoiceNumber(tenantId: string): Promise<number> {
-  const filter: QueryFilter<InvoiceCounterDoc> = { tenantId };
-
   const doc = await InvoiceCounter.findOneAndUpdate(
-    filter,
+    { tenantId },
     { $inc: { nextNumber: 1 } },
-    { returnDocument: 'after', upsert: true },
+    { upsert: true, returnDocument: 'after' },
   ).lean();
 
-  return doc.nextNumber - 1;
+  if (!doc) {
+    throw new Error('Failed to allocate invoice number');
+  }
+
+  return doc.nextNumber;
 }

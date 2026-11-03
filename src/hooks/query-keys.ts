@@ -3,4 +3,5 @@ export const queryKeys = {
     project: (tenantId: string, id: string) => ['projects', tenantId, id] as const,
     timeEntries: (tenantId: string) => ['time-entries', tenantId] as const,
     invoices: (tenantId: string) => ['invoices', tenantId] as const,
+    membership: (tenantId: string) => ['membership', tenantId] as const,
   };
