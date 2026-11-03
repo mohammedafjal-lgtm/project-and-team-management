@@ -21,9 +21,9 @@ const DEFAULT_ACCOUNTS: DefaultAccount[] = [
 /**
  * Idempotently seed the system chart of accounts for a new tenant.
  *
- * Safe to call without tenantStorage context: Account's pre('save') hook only
- * calls getTenantId() when the document is new AND tenantId is missing — we
- * always pass it explicitly. Duplicate inserts are caught and ignored.
+ * Safe to call without tenantStorage context: Account's pre('validate') hook
+ * only calls getTenantId() when the document is new AND tenantId is missing —
+ * we always pass it explicitly. Duplicate inserts are caught and ignored.
  */
 export async function seedSystemAccounts(tenantId: string): Promise<void> {
   for (const d of DEFAULT_ACCOUNTS) {

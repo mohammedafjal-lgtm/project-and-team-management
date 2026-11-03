@@ -10,14 +10,17 @@ export const GET = withTenant(async () => {
 });
 
 export const POST = withTenant(
-  async (req) => {
+  async (req, ctx) => {
     const body: unknown = await req.json();
     const parsed = createProjectSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.issues }, { status: 400 });
     }
 
-    const project = new Project(parsed.data);
+    const project = new Project({
+      ...parsed.data,
+      tenantId: ctx.tenantId,
+    });
     await project.save();
     return NextResponse.json(project.toObject(), { status: 201 });
   },

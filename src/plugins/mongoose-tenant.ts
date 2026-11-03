@@ -38,7 +38,9 @@ export function tenantPlugin(schema: Schema) {
     this.pipeline().unshift({ $match: { tenantId } });
   });
 
-  schema.pre('save', function (this: { isNew: boolean; tenantId?: string }) {
+  // Must run on validate (not save): Mongoose validates before pre('save'),
+  // so injecting tenantId in save is too late for required:true fields.
+  schema.pre('validate', function (this: { isNew: boolean; tenantId?: string }) {
     if (this.isNew && !this.tenantId) {
       this.tenantId = getTenantId();
     } else if (!this.isNew && this.tenantId !== getTenantId()) {
