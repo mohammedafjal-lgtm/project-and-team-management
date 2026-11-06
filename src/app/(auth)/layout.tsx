@@ -1,31 +1,17 @@
-import { headers } from 'next/headers';
-import Link from 'next/link';
-import { redirect } from 'next/navigation';
-import { getAuth } from '@/lib/auth';
+import Link from "next/link";
 
-export default async function AuthLayout({ children }: { children: React.ReactNode }) {
-  const auth = await getAuth();
-  const session = await auth.api.getSession({ headers: await headers() });
-
-  if (session) {
-    const activeTenantId = (session.user as { activeTenantId?: string }).activeTenantId;
-    redirect(activeTenantId ? '/projects' : '/onboarding');
-  }
-
+export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <main className="bg-muted/30 relative flex min-h-screen items-center justify-center p-6">
-      <Link
-        href="/"
-        className="absolute top-6 left-6 flex items-center gap-2 text-sm font-semibold"
-      >
-        <span className="bg-primary text-primary-foreground flex size-7 items-center justify-center rounded-md text-xs">
-          PT
-        </span>
-        <span>Project &amp; Team</span>
-      </Link>
-      <div className="bg-background w-full max-w-sm rounded-xl border p-6 shadow-sm">
-        {children}
-      </div>
-    </main>
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 flex flex-col">
+      <header className="p-6">
+        <Link href="/" className="font-semibold tracking-tight text-neutral-900 dark:text-neutral-100">
+          PTM
+        </Link>
+      </header>
+      <main className="flex-1 flex items-center justify-center px-4">{children}</main>
+      <footer className="p-6 text-xs text-neutral-500">
+        By continuing you agree to our Terms and Privacy Policy.
+      </footer>
+    </div>
   );
 }

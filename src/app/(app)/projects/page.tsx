@@ -1,127 +1,59 @@
-'use client';
+import Link from "next/link";
+import { getTenantContext } from "@/lib/tenancy/resolve";
+import { prisma } from "@/lib/db/prisma";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
-import { FolderKanban } from 'lucide-react';
-import { useState } from 'react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { EmptyState } from '@/components/ui/empty-state';
-import { FieldError } from '@/components/ui/form-field';
-import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Spinner } from '@/components/ui/spinner';
-import { useActiveTenant } from '@/hooks/use-active-tenant';
-import { useMembership } from '@/hooks/use-membership';
-import { useCreateProject, useProjects } from '@/hooks/use-projects';
-
-export default function ProjectsPage() {
-  const { activeTenantId } = useActiveTenant();
-  const { canWrite } = useMembership(activeTenantId);
-  const [name, setName] = useState('');
-  const [error, setError] = useState<string | undefined>();
-  const { data: projects, isLoading, isError, error: queryError } = useProjects(activeTenantId);
-  const createProject = useCreateProject(activeTenantId ?? '');
+export default async function ProjectsPage() {
+  const ctx = await getTenantContext();
+  const projects = await prisma.project.findMany({
+    where: { tenantId: ctx.tenantId },
+    include: { client: true, _count: { select: { tasks: true } } },
+    orderBy: { updatedAt: "desc" },
+  });
 
   return (
-    <main className="mx-auto max-w-2xl space-y-6 p-6">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Projects</h1>
-        <p className="text-muted-foreground text-sm">
-          Group time entries and invoices under shared work.
-        </p>
-      </header>
-
-      {canWrite && (
-        <form
-          className="space-y-1.5"
-          noValidate
-          onSubmit={(e) => {
-            e.preventDefault();
-            const trimmed = name.trim();
-            if (!trimmed) {
-              setError('Project name is required');
-              return;
-            }
-            if (trimmed.length > 120) {
-              setError('Project name must be 120 characters or fewer');
-              return;
-            }
-            createProject.mutate(
-              { name: trimmed },
-              {
-                onSuccess: () => {
-                  setName('');
-                  setError(undefined);
-                },
-              },
-            );
-          }}
-        >
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <Input
-                value={name}
-                onChange={(e) => {
-                  setName(e.target.value);
-                  if (error) setError(undefined);
-                }}
-                placeholder="New project name"
-                aria-invalid={!!error}
-                maxLength={120}
-              />
-            </div>
-            <Button type="submit" disabled={createProject.isPending}>
-              {createProject.isPending ? (
-                <>
-                  <Spinner /> Creating…
-                </>
-              ) : (
-                'Create'
-              )}
-            </Button>
-          </div>
-          <FieldError error={error} />
-        </form>
-      )}
-
-      {isLoading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-14 w-full" />
-          ))}
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Projects</h1>
+          <p className="text-sm text-neutral-500 mt-1">{projects.length} total</p>
         </div>
-      ) : isError ? (
-        <EmptyState
-          icon={FolderKanban}
-          title="Couldn't load projects"
-          description={queryError instanceof Error ? queryError.message : 'Try again in a moment.'}
-        />
-      ) : projects && projects.length > 0 ? (
-        <ul className="divide-y rounded-lg border">
-          {projects.map((p) => (
-            <li key={p._id} className="flex items-center justify-between gap-4 p-3">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium">{p.name}</p>
-                <p className="text-muted-foreground text-xs">
-                  Created {new Date(p.createdAt).toLocaleDateString()}
-                </p>
-              </div>
-              <Badge variant={p.status === 'active' ? 'success' : 'muted'}>
-                {p.status}
-              </Badge>
-            </li>
-          ))}
-        </ul>
+        <Button asChild><Link href="/projects/new">New project</Link></Button>
+      </div>
+
+      {projects.length === 0 ? (
+        <div className="border border-dashed border-neutral-200 dark:border-neutral-800 rounded-lg p-12 text-center">
+          <p className="font-medium">No projects yet</p>
+          <p className="text-sm text-neutral-500 mt-1">Create your first project to start logging time.</p>
+          <Button asChild className="mt-4"><Link href="/projects/new">New project</Link></Button>
+        </div>
       ) : (
-        <EmptyState
-          icon={FolderKanban}
-          title="No projects yet"
-          description={
-            canWrite
-              ? 'Create your first project using the form above.'
-              : 'Ask a workspace admin to create one.'
-          }
-        />
+        <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg overflow-hidden bg-white dark:bg-neutral-950">
+          <table className="w-full text-sm">
+            <thead className="bg-neutral-50 dark:bg-neutral-900 text-left text-xs text-neutral-500 uppercase tracking-wider">
+              <tr>
+                <th className="px-4 py-2 font-medium">Name</th>
+                <th className="px-4 py-2 font-medium">Client</th>
+                <th className="px-4 py-2 font-medium">Status</th>
+                <th className="px-4 py-2 font-medium">Tasks</th>
+              </tr>
+            </thead>
+            <tbody>
+              {projects.map((p) => (
+                <tr key={p.id} className="border-t border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-900/60">
+                  <td className="px-4 py-3">
+                    <Link href={`/projects/${p.id}/board`} className="font-medium hover:underline">{p.name}</Link>
+                  </td>
+                  <td className="px-4 py-3 text-neutral-600 dark:text-neutral-400">{p.client.name}</td>
+                  <td className="px-4 py-3"><Badge variant="outline">{p.status}</Badge></td>
+                  <td className="px-4 py-3 text-neutral-600 dark:text-neutral-400">{p._count.tasks}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
-    </main>
+    </div>
   );
 }

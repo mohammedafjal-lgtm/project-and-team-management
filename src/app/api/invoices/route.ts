@@ -1,48 +1,70 @@
-import { NextResponse } from 'next/server';
-import { withTenant } from '@/lib/tenant/with-tenant';
-import { WRITE_ROLES } from '@/lib/tenant/roles';
-import { Invoice } from '@/models/invoice.model';
-import { createInvoiceSchema } from '@/lib/schemas/invoice';
-import { allocateInvoiceNumber } from '@/lib/services/invoice.service';
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { headers } from "next/headers";
+import { requireTenantContext } from "@/lib/tenancy/context";
+import { prisma } from "@/lib/db/prisma";
+import { computeInvoiceTotals } from "@/domains/billing/invoice.service";
+import { ensureChartOfAccounts } from "@/domains/bookkeeping/ledger.service";
 
-export const GET = withTenant(async () => {
-  const invoices = await Invoice.find().sort({ createdAt: -1 }).lean();
-  return NextResponse.json(invoices);
+const Line = z.object({
+  description: z.string().min(1),
+  quantity: z.number().int().min(1),
+  unitPriceCents: z.number().int().min(0),
 });
 
-export const POST = withTenant(
-  async (req, ctx) => {
-    const parsed = createInvoiceSchema.safeParse(await req.json());
-    if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues }, { status: 400 });
-    }
+const Body = z.object({
+  clientId: z.string().min(1),
+  issueDate: z.string(),
+  dueDate: z.string(),
+  taxRateBps: z.number().int().min(0).max(10000),
+  lineItems: z.array(Line).min(1),
+});
 
-    // Recompute per-line amount and invoice total on the server.
-    const lines = parsed.data.lines.map((l) => ({
-      description: l.description,
-      quantity: l.quantity,
-      unitAmountCents: l.unitAmountCents,
-      amountCents: Math.round(l.quantity * l.unitAmountCents),
-    }));
+export async function POST(req: Request) {
+  const h = await headers();
+  const ctx = await requireTenantContext(h.get("x-tenant-id"));
+  const parsed = Body.safeParse(await req.json());
+  if (!parsed.success) return NextResponse.json({ message: "Invalid input", issues: parsed.error.flatten() }, { status: 400 });
+  const { clientId, issueDate, dueDate, taxRateBps, lineItems } = parsed.data;
 
-    if (lines.some((l) => !Number.isInteger(l.amountCents) || l.amountCents < 0)) {
-      return NextResponse.json({ error: 'Invalid line amount' }, { status: 400 });
-    }
+  await ensureChartOfAccounts(ctx);
 
-    const totalCents = lines.reduce((s, l) => s + l.amountCents, 0);
-    const invoiceNumber = await allocateInvoiceNumber(ctx.tenantId);
+  const { subtotalCents, taxCents, totalCents } = computeInvoiceTotals(lineItems, taxRateBps);
 
-    const invoice = await Invoice.create({
-      tenantId: ctx.tenantId,
-      invoiceNumber,
-      clientName: parsed.data.clientName,
-      currency: 'INR',
-      lines,
-      totalCents,
-      status: 'draft',
+  // Atomic invoice numbering per tenant.
+  const counter = await prisma.$transaction(async (tx) => {
+    const tenant = await tx.tenant.findUnique({ where: { id: ctx.tenantId } });
+    if (!tenant) throw new Error("Tenant not found");
+    const last = await tx.invoice.findFirst({
+      where: { tenantId: ctx.tenantId },
+      orderBy: { createdAt: "desc" },
+      select: { number: true },
     });
+    const nextNum = last ? String(parseInt(last.number, 10) + 1) : "1001";
 
-    return NextResponse.json(invoice.toObject(), { status: 201 });
-  },
-  { roles: WRITE_ROLES },
-);
+    return tx.invoice.create({
+      data: {
+        tenantId: ctx.tenantId,
+        clientId,
+        number: nextNum,
+        issueDate: new Date(issueDate),
+        dueDate: new Date(dueDate),
+        subtotalCents,
+        taxCents,
+        totalCents,
+        lineItems: {
+          create: lineItems.map((l, i) => ({
+            tenantId: ctx.tenantId,
+            description: l.description,
+            quantity: l.quantity,
+            unitPriceCents: l.unitPriceCents,
+            amountCents: l.unitPriceCents * l.quantity,
+            sortOrder: i,
+          })),
+        },
+      },
+    });
+  });
+
+  return NextResponse.json(counter);
+}

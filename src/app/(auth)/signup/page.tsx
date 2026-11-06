@@ -1,144 +1,74 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
-import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
-import { FormField } from '@/components/ui/form-field';
-import { Input } from '@/components/ui/input';
-import { PasswordInput } from '@/components/ui/password-input';
-import { Spinner } from '@/components/ui/spinner';
-import { authClient } from '@/lib/auth-client';
-import { signupSchema, type SignupInput } from '@/lib/schemas/auth';
-
-type FieldErrors = Partial<Record<keyof SignupInput, string>>;
+import { useState } from "react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
 
 export default function SignupPage() {
-  const router = useRouter();
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [errors, setErrors] = useState<FieldErrors>({});
-  const [pending, setPending] = useState(false);
+  const [form, setForm] = useState({ name: "", email: "", password: "", tenantName: "" });
+  const [loading, setLoading] = useState(false);
 
-  function validate(): SignupInput | null {
-    const result = signupSchema.safeParse({ name, email, password });
-    if (result.success) {
-      setErrors({});
-      return result.data;
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message ?? "Signup failed");
+      window.location.href = data.redirectTo;
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Signup failed");
+      setLoading(false);
     }
-    const next: FieldErrors = {};
-    for (const issue of result.error.issues) {
-      const key = issue.path[0];
-      if (key === 'name' || key === 'email' || key === 'password') {
-        next[key] ??= issue.message;
-      }
-    }
-    setErrors(next);
-    return null;
   }
 
   return (
-    <form
-      className="space-y-5"
-      noValidate
-      onSubmit={(e) => {
-        e.preventDefault();
-        const data = validate();
-        if (!data) return;
-        setPending(true);
-        void authClient.signUp
-          .email(data)
-          .then(({ error }) => {
-            if (error) {
-              toast.error(error.message ?? 'Sign-up failed');
-              return;
-            }
-            router.push('/onboarding');
-            router.refresh();
-          })
-          .catch((err: unknown) => {
-            toast.error(err instanceof Error ? err.message : 'Sign-up failed');
-          })
-          .finally(() => { setPending(false); });
-      }}
-    >
-      <div className="space-y-1">
-        <h1 className="text-xl font-semibold tracking-tight">Create your account</h1>
-        <p className="text-muted-foreground text-sm">
-          Then set up your workspace. Takes 30 seconds.
-        </p>
-      </div>
+    <div className="w-full max-w-sm">
+      <h1 className="text-2xl font-semibold tracking-tight mb-1">Create your workspace</h1>
+      <p className="text-sm text-neutral-500 mb-8">
+        Start managing projects, time, and billing in minutes.
+      </p>
 
-      <FormField label="Name" htmlFor="name" error={errors.name}>
-        <Input
-          id="name"
-          autoComplete="name"
-          value={name}
-          onChange={(e) => {
-            setName(e.target.value);
-            if (errors.name) setErrors((x) => ({ ...x, name: undefined }));
-          }}
-          placeholder="Your name"
-          aria-invalid={!!errors.name}
-          autoFocus
-        />
-      </FormField>
+      <form onSubmit={onSubmit} className="space-y-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="name">Your name</Label>
+          <Input id="name" autoFocus required value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })} />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="email">Email</Label>
+          <Input id="email" type="email" required value={form.email}
+            onChange={(e) => setForm({ ...form, email: e.target.value })} />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="password">Password</Label>
+          <Input id="password" type="password" minLength={8} required value={form.password}
+            onChange={(e) => setForm({ ...form, password: e.target.value })} />
+          <p className="text-xs text-neutral-500">At least 8 characters.</p>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="tenantName">Workspace name</Label>
+          <Input id="tenantName" required value={form.tenantName}
+            onChange={(e) => setForm({ ...form, tenantName: e.target.value })} />
+        </div>
+        <Button type="submit" className="w-full" disabled={loading}>
+          {loading ? "Creating…" : "Create workspace"}
+        </Button>
+      </form>
 
-      <FormField label="Email" htmlFor="email" error={errors.email}>
-        <Input
-          id="email"
-          type="email"
-          autoComplete="email"
-          value={email}
-          onChange={(e) => {
-            setEmail(e.target.value);
-            if (errors.email) setErrors((x) => ({ ...x, email: undefined }));
-          }}
-          placeholder="you@company.com"
-          aria-invalid={!!errors.email}
-        />
-      </FormField>
-
-      <FormField
-        label="Password"
-        htmlFor="password"
-        error={errors.password}
-        hint="At least 8 characters."
-      >
-        <PasswordInput
-          id="password"
-          autoComplete="new-password"
-          value={password}
-          onChange={(e) => {
-            setPassword(e.target.value);
-            if (errors.password) setErrors((x) => ({ ...x, password: undefined }));
-          }}
-          placeholder="Choose a password"
-          aria-invalid={!!errors.password}
-        />
-      </FormField>
-
-      <Button type="submit" disabled={pending} className="w-full">
-        {pending ? (
-          <>
-            <Spinner /> Creating account…
-          </>
-        ) : (
-          'Create account'
-        )}
-      </Button>
-
-      <p className="text-muted-foreground text-center text-sm">
-        Already have an account?{' '}
-        <Link
-          href="/login"
-          className="text-foreground font-medium underline underline-offset-4"
-        >
+      <p className="mt-6 text-sm text-neutral-500 text-center">
+        Already have an account?{" "}
+        <Link href="/login" className="underline underline-offset-4 hover:text-neutral-900 dark:hover:text-neutral-100">
           Sign in
         </Link>
       </p>
-    </form>
+    </div>
   );
 }

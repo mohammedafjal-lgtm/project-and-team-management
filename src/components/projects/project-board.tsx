@@ -1,0 +1,162 @@
+"use client";
+
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api/client";
+import { toast } from "sonner";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { TaskCard } from "@/components/projects/task-card";
+import {
+  DndContext, DragEndEvent, PointerSensor, useSensor, useSensors,
+  useDroppable, DragOverlay, DragStartEvent,
+} from "@dnd-kit/core";
+
+type Status = "TODO" | "IN_PROGRESS" | "DONE";
+type Task = { id: string; title: string; description: string; status: string };
+
+const COLUMNS: { key: Status; label: string }[] = [
+  { key: "TODO", label: "To do" },
+  { key: "IN_PROGRESS", label: "In progress" },
+  { key: "DONE", label: "Done" },
+];
+
+function Column({ id, label, count, onAdd, children }: {
+  id: Status; label: string; count: number; onAdd: () => void; children: React.ReactNode;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+  return (
+    <div
+      ref={setNodeRef}
+      className={`rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50/60 dark:bg-neutral-900/40 p-3 min-h-[200px] flex flex-col gap-2 transition-colors ${
+        isOver ? "ring-2 ring-neutral-400/60" : ""
+      }`}
+    >
+      <div className="flex items-center justify-between px-1 mb-1">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium">{label}</span>
+          <span className="text-xs text-neutral-500">{count}</span>
+        </div>
+        <button onClick={onAdd} className="text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100">
+          <Plus className="w-4 h-4" />
+        </button>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+export function ProjectBoard({ projectId, initialTasks }: { projectId: string; initialTasks: Task[] }) {
+  const qc = useQueryClient();
+  const qKey = ["tasks", projectId];
+
+  const { data: tasks = initialTasks } = useQuery<Task[]>({
+    queryKey: qKey,
+    queryFn: async () => {
+      const res = await api.get(`/projects/${projectId}/tasks`);
+      return res.data;
+    },
+    initialData: initialTasks,
+    staleTime: 10_000,
+  });
+
+  const [dragging, setDragging] = useState<Task | null>(null);
+  const [adding, setAdding] = useState<Status | null>(null);
+  const [newTitle, setNewTitle] = useState("");
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+
+  const move = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: Status }) => {
+      await api.patch(`/tasks/${id}`, { status });
+    },
+    onMutate: async ({ id, status }) => {
+      await qc.cancelQueries({ queryKey: qKey });
+      const prev = qc.getQueryData<Task[]>(qKey) ?? [];
+      qc.setQueryData<Task[]>(qKey, prev.map((t) => (t.id === id ? { ...t, status } : t)));
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => {
+      if (ctx?.prev) qc.setQueryData(qKey, ctx.prev);
+      toast.error("Could not move task");
+    },
+    onSuccess: () => toast.success("Task moved"),
+  });
+
+  const add = useMutation({
+    mutationFn: async ({ title }: { status: Status; title: string }) => {
+      const res = await api.post(`/projects/${projectId}/tasks`, { title });
+      return res.data as Task & { status: string };
+    },
+    onSuccess: (created, vars) => {
+      if (vars.status !== "TODO") {
+        api.patch(`/tasks/${created.id}`, { status: vars.status });
+      }
+      qc.invalidateQueries({ queryKey: qKey });
+      setAdding(null);
+      setNewTitle("");
+      toast.success("Task created");
+    },
+  });
+
+  function onDragStart(e: DragStartEvent) {
+    setDragging(tasks.find((t) => t.id === e.active.id) ?? null);
+  }
+
+  function onDragEnd(e: DragEndEvent) {
+    setDragging(null);
+    const id = String(e.active.id);
+    const overId = e.over?.id ? String(e.over.id) : null;
+    if (!overId) return;
+    if (!["TODO", "IN_PROGRESS", "DONE"].includes(overId)) return;
+    const task = tasks.find((t) => t.id === id);
+    if (!task || task.status === overId) return;
+    move.mutate({ id, status: overId as Status });
+  }
+
+  return (
+    <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {COLUMNS.map((col) => {
+          const items = tasks.filter((t) => t.status === col.key);
+          return (
+            <Column
+              key={col.key}
+              id={col.key}
+              label={col.label}
+              count={items.length}
+              onAdd={() => setAdding(col.key)}
+            >
+              {items.map((t) => (
+                <TaskCard key={t.id} task={t} />
+              ))}
+
+              {adding === col.key ? (
+                <form
+                  onSubmit={(e) => { e.preventDefault(); if (newTitle.trim()) add.mutate({ status: col.key, title: newTitle }); }}
+                  className="space-y-2"
+                >
+                  <Input autoFocus placeholder="Task title…" value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Escape") { setAdding(null); setNewTitle(""); } }} />
+                  <div className="flex gap-2">
+                    <Button size="sm" type="submit" disabled={!newTitle.trim() || add.isPending}>Add</Button>
+                    <Button size="sm" variant="ghost" type="button" onClick={() => { setAdding(null); setNewTitle(""); }}>Cancel</Button>
+                  </div>
+                </form>
+              ) : null}
+            </Column>
+          );
+        })}
+      </div>
+      <DragOverlay>
+        {dragging ? (
+          <div className="rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-3 shadow-lg text-sm">
+            {dragging.title}
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
+  );
+}

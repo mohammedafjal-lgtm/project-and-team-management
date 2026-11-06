@@ -1,0 +1,318 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MANAGER
+  MEMBER
+  CLIENT
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  VIEWED
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  VOID
+}
+
+enum TimeEntryStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  LOCKED
+}
+
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+}
+
+enum JournalStatus {
+  DRAFT
+  POSTED
+  REVERSED
+}
+
+model Tenant {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  plan      String   @default("FREE")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships  Membership[]
+  clients      Client[]
+  projects     Project[]
+  timeEntries  TimeEntry[]
+  invoices     Invoice[]
+  payments     Payment[]
+  accounts     LedgerAccount[]
+  journals     JournalEntry[]
+  processedEvents ProcessedStripeEvent[]
+
+  @@index([slug])
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String?
+  name          String?
+  image         String?
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  memberships Membership[]
+  timeEntries TimeEntry[]
+}
+
+model Membership {
+  id       String @id @default(cuid())
+  userId   String
+  tenantId String
+  role     Role   @default(MEMBER)
+  status   String @default("ACTIVE")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tenantId])
+  @@index([tenantId, role])
+  @@index([userId, status])
+}
+
+model Client {
+  id               String   @id @default(cuid())
+  tenantId         String
+  name             String
+  email            String?
+  billingAddress   String?
+  currency         String   @default("USD")
+  defaultRateCents Int      @default(0)
+  taxRateBps       Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  projects  Project[]
+  invoices  Invoice[]
+
+  @@index([tenantId, name])
+}
+
+model Project {
+  id           String   @id @default(cuid())
+  tenantId     String
+  clientId     String
+  name         String
+  code         String?
+  status       String   @default("ACTIVE")
+  budgetType   String   @default("NONE") // NONE | HOURS | AMOUNT
+  budgetMinutes Int?
+  budgetCents  Int?
+  startDate    DateTime?
+  endDate      DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  client      Client      @relation(fields: [clientId], references: [id])
+  tasks       Task[]
+  timeEntries TimeEntry[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, clientId, status])
+}
+
+model Task {
+  id            String    @id @default(cuid())
+  tenantId      String
+  projectId     String
+  title         String
+  description   String?
+  status        String    @default("TODO") // TODO | IN_PROGRESS | DONE
+  assigneeIds   String[]  @default([])
+  estimateMinutes Int?
+  dueDate       DateTime?
+  createdBy     String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  timeEntries TimeEntry[]
+
+  @@index([tenantId, projectId, status])
+  @@index([tenantId, assigneeIds])
+}
+
+model TimeEntry {
+  id                String          @id @default(cuid())
+  tenantId          String
+  projectId         String
+  taskId            String?
+  userId            String
+  date              DateTime        @db.Date
+  durationMinutes   Int
+  billable          Boolean         @default(true)
+  rateCentsSnapshot Int
+  notes             String?
+  status            TimeEntryStatus @default(DRAFT)
+  approvedBy        String?
+  approvedAt        DateTime?
+  invoiceId         String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  project   Project   @relation(fields: [projectId], references: [id])
+  task      Task?     @relation(fields: [taskId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+  invoice   Invoice?  @relation(fields: [invoiceId], references: [id])
+
+  @@index([tenantId, userId, date])
+  @@index([tenantId, projectId, status])
+  @@index([tenantId, invoiceId])
+  @@index([tenantId, status])
+}
+
+model Invoice {
+  id              String        @id @default(cuid())
+  tenantId        String
+  clientId        String
+  number          String
+  status          InvoiceStatus @default(DRAFT)
+  issueDate       DateTime      @db.Date
+  dueDate         DateTime      @db.Date
+  currency        String        @default("USD")
+  subtotalCents   Int
+  taxCents        Int
+  totalCents      Int
+  amountPaidCents Int           @default(0)
+  stripePaymentIntentId String?
+  sentAt          DateTime?
+  viewedAt        DateTime?
+  paidAt          DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  tenant      Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  client      Client            @relation(fields: [clientId], references: [id])
+  lineItems   InvoiceLineItem[]
+  payments    Payment[]
+  timeEntries TimeEntry[]
+
+  @@unique([tenantId, number])
+  @@index([tenantId, clientId, status])
+  @@index([tenantId, status, dueDate])
+}
+
+model InvoiceLineItem {
+  id          String @id @default(cuid())
+  tenantId    String
+  invoiceId   String
+  description String
+  quantity    Int    @default(1) // in hundredths for fractional quantities, or use Decimal
+  unitPriceCents Int
+  amountCents Int
+  sortOrder   Int    @default(0)
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, invoiceId])
+}
+
+model Payment {
+  id              String   @id @default(cuid())
+  tenantId        String
+  invoiceId       String
+  amountCents     Int
+  currency        String   @default("USD")
+  method          String   @default("MANUAL") // MANUAL | STRIPE | BANK_TRANSFER
+  reference       String?
+  idempotencyKey  String?  @unique
+  receivedAt      DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoice Invoice @relation(fields: [invoiceId], references: [id])
+
+  @@index([tenantId, invoiceId])
+}
+
+model LedgerAccount {
+  id            String      @id @default(cuid())
+  tenantId      String
+  code          String
+  name          String
+  type          AccountType
+  normalBalance String // DEBIT | CREDIT
+  isSystem      Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+
+  tenant Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lines  JournalLine[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId, type])
+}
+
+model JournalEntry {
+  id            String        @id @default(cuid())
+  tenantId      String
+  date          DateTime      @db.Date
+  description   String
+  referenceType String? // INVOICE | PAYMENT | CREDIT_NOTE | ADJUSTMENT
+  referenceId   String?
+  status        JournalStatus @default(POSTED)
+  postedAt      DateTime      @default(now())
+  createdBy     String?
+  createdAt     DateTime      @default(now())
+
+  tenant Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  lines  JournalLine[]
+
+  @@index([tenantId, date])
+  @@index([tenantId, referenceType, referenceId])
+}
+
+model JournalLine {
+  id             String @id @default(cuid())
+  tenantId       String
+  journalEntryId String
+  accountId      String
+  debitCents     Int    @default(0)
+  creditCents    Int    @default(0)
+  memo           String?
+
+  journalEntry JournalEntry @relation(fields: [journalEntryId], references: [id], onDelete: Cascade)
+  account      LedgerAccount @relation(fields: [accountId], references: [id])
+
+  @@index([tenantId, journalEntryId])
+  @@index([tenantId, accountId])
+}
+
+model ProcessedStripeEvent {
+  id          String   @id
+  tenantId    String?
+  type        String
+  processedAt DateTime @default(now())
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id])
+}

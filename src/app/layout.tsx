@@ -1,21 +1,24 @@
-import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
-import Providers from './providers';
-import './globals.css';
+import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
+import "./globals.css";
+import { Providers } from "@/components/providers";
+import { CommandPalette } from "@/components/command-palette/command-palette";
+import { Toaster } from "@/components/ui/sonner";
 
-const geist = Geist({ subsets: ['latin'], variable: '--font-sans' });
-const geistMono = Geist_Mono({ subsets: ['latin'], variable: '--font-geist-mono' });
+const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
+const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
-export const metadata: Metadata = {
-  title: 'Project & Team Management',
-  description: 'Projects, time tracking, invoicing, and bookkeeping',
-};
+export const metadata: Metadata = { title: "PTM", description: "Projects, time, billing, bookkeeping." };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${geist.variable} ${geistMono.variable}`}>
-      <body>
-        <Providers>{children}</Providers>
+    <html lang="en">
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <Providers>
+          <CommandPalette />
+          {children}
+          <Toaster />
+        </Providers>
       </body>
     </html>
   );
