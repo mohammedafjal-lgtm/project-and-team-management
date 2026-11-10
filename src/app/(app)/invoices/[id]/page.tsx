@@ -16,7 +16,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
 
   return (
     <div className="space-y-8 max-w-3xl">
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between gap-6">
         <div>
           <p className="text-xs text-neutral-500 uppercase tracking-wider">Invoice</p>
           <h1 className="text-2xl font-semibold tracking-tight">#{invoice.number}</h1>
@@ -24,8 +24,24 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
             {invoice.client.name} · {invoice.status} · due{" "}
             {formatDate(invoice.dueDate)}
           </p>
+          {invoice.publicToken ? (
+            <a
+              href={`/i/${invoice.publicToken}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block mt-2 text-xs text-neutral-500 underline underline-offset-4 hover:text-neutral-900 dark:hover:text-neutral-100"
+            >
+              Public link
+            </a>
+          ) : null}
         </div>
-        <InvoiceActions id={invoice.id} status={invoice.status} />
+        <InvoiceActions
+          id={invoice.id}
+          status={invoice.status}
+          totalCents={invoice.totalCents}
+          amountPaidCents={invoice.amountPaidCents}
+          currency={invoice.currency}
+        />
       </div>
 
       <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg overflow-hidden bg-white dark:bg-neutral-950">
@@ -62,6 +78,20 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
             <span>Total</span>
             <span>{money(invoice.totalCents, invoice.currency)}</span>
           </div>
+          {invoice.amountPaidCents > 0 ? (
+            <>
+              <div className="flex w-56 justify-between">
+                <span className="text-neutral-500">Paid</span>
+                <span>− {money(invoice.amountPaidCents, invoice.currency)}</span>
+              </div>
+              {invoice.amountPaidCents < invoice.totalCents ? (
+                <div className="flex w-56 justify-between font-medium">
+                  <span className="text-neutral-500">Outstanding</span>
+                  <span>{money(invoice.totalCents - invoice.amountPaidCents, invoice.currency)}</span>
+                </div>
+              ) : null}
+            </>
+          ) : null}
         </div>
       </div>
     </div>

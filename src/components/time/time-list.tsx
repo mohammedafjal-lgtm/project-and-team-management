@@ -7,18 +7,38 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/date";
 
 type Entry = {
-  id: string; date: string; durationMinutes: number; billable: boolean;
-  status: string; projectName: string; userName: string; notes: string | null;
+  id: string;
+  date: string;
+  durationMinutes: number;
+  billable: boolean;
+  status: string;
+  projectName: string;
+  userName: string;
+  notes: string | null;
 };
 
 type Project = { id: string; name: string; clientName: string; defaultRateCents: number };
 
-export function TimeList({ initialEntries, projects }: { initialEntries: Entry[]; projects: Project[] }) {
+export function TimeList({
+  initialEntries,
+  projects,
+  canApprove,
+}: {
+  initialEntries: Entry[];
+  projects: Project[];
+  canApprove: boolean;
+}) {
   const qc = useQueryClient();
   const qKey = ["time"];
   const { data: entries = initialEntries } = useQuery<Entry[]>({
@@ -35,6 +55,8 @@ export function TimeList({ initialEntries, projects }: { initialEntries: Entry[]
     notes: "",
   });
 
+  const invalidate = () => qc.invalidateQueries({ queryKey: qKey });
+
   const create = useMutation({
     mutationFn: async () => {
       const project = projects.find((p) => p.id === form.projectId);
@@ -44,17 +66,46 @@ export function TimeList({ initialEntries, projects }: { initialEntries: Entry[]
         date: form.date,
         durationMinutes: Math.round(form.hours * 60),
         billable: true,
-        // rateCentsSnapshot intentionally omitted — server derives it.
         notes: form.notes || undefined,
       });
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: qKey });
+      invalidate();
       toast.success("Time logged");
       setOpen(false);
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
+
+  const action = useMutation({
+    mutationFn: async ({ id, action }: { id: string; action: "submit" | "approve" | "reject" }) => {
+      await api.post(`/time/${id}/${action}`);
+    },
+    onSuccess: (_d, v) => {
+      invalidate();
+      toast.success(v.action === "submit" ? "Submitted" : v.action === "approve" ? "Approved" : "Rejected");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+
+  function actions(entry: Entry) {
+    if (entry.status === "DRAFT") {
+      return (
+        <Button size="xs" variant="outline" onClick={() => action.mutate({ id: entry.id, action: "submit" })}>
+          Submit
+        </Button>
+      );
+    }
+    if (entry.status === "SUBMITTED" && canApprove) {
+      return (
+        <div className="flex gap-1">
+          <Button size="xs" onClick={() => action.mutate({ id: entry.id, action: "approve" })}>Approve</Button>
+          <Button size="xs" variant="outline" onClick={() => action.mutate({ id: entry.id, action: "reject" })}>Reject</Button>
+        </div>
+      );
+    }
+    return null;
+  }
 
   return (
     <div className="space-y-4">
@@ -108,11 +159,12 @@ export function TimeList({ initialEntries, projects }: { initialEntries: Entry[]
               <th className="px-4 py-2 font-medium">User</th>
               <th className="px-4 py-2 font-medium text-right">Hours</th>
               <th className="px-4 py-2 font-medium">Status</th>
+              <th className="px-4 py-2 font-medium">Actions</th>
             </tr>
           </thead>
           <tbody>
             {entries.length === 0 ? (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-neutral-500">No time logged yet.</td></tr>
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-neutral-500">No time logged yet.</td></tr>
             ) : entries.map((e) => (
               <tr key={e.id} className="border-t border-neutral-200 dark:border-neutral-800">
                 <td className="px-4 py-3">{formatDate(e.date)}</td>
@@ -120,6 +172,7 @@ export function TimeList({ initialEntries, projects }: { initialEntries: Entry[]
                 <td className="px-4 py-3">{e.userName}</td>
                 <td className="px-4 py-3 text-right">{(e.durationMinutes / 60).toFixed(2)}</td>
                 <td className="px-4 py-3"><Badge variant="outline">{e.status}</Badge></td>
+                <td className="px-4 py-3">{actions(e)}</td>
               </tr>
             ))}
           </tbody>

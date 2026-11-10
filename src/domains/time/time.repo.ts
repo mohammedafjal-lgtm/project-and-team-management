@@ -13,7 +13,7 @@ export async function listTimeEntries(
       ...(opts?.projectId && { projectId: opts.projectId }),
       ...(opts?.status && { status: opts.status }),
     },
-    include: { project: true, user: true, task: true },
+    include: { project: true, user: true, task: true, invoice: { select: { id: true, number: true } } },
     orderBy: { date: "desc" },
   });
 }
@@ -30,12 +30,19 @@ export async function createTimeEntry(
     notes?: string;
   }
 ) {
-  // Verify the project belongs to this tenant before creating the entry.
   const project = await prisma.project.findFirst({
     where: { id: input.projectId, tenantId: ctx.tenantId },
     select: { id: true },
   });
   if (!project) throw new Error("Project not found");
+
+  if (input.taskId) {
+    const task = await prisma.task.findFirst({
+      where: { id: input.taskId, tenantId: ctx.tenantId, projectId: input.projectId },
+      select: { id: true },
+    });
+    if (!task) throw new Error("Task not found on this project");
+  }
 
   return prisma.timeEntry.create({
     data: {
@@ -43,5 +50,61 @@ export async function createTimeEntry(
       tenantId: ctx.tenantId,
       userId: ctx.userId,
     },
+  });
+}
+
+export async function updateTimeEntry(
+  ctx: TenantContext,
+  id: string,
+  input: { notes?: string | null; durationMinutes?: number; date?: Date; billable?: boolean }
+) {
+  const entry = await prisma.timeEntry.findFirst({ where: { id, tenantId: ctx.tenantId } });
+  if (!entry) throw new Error("Time entry not found");
+  if (entry.status === "LOCKED") throw new Error("Time entry is locked (on an invoice)");
+  // Members can only edit their own drafts
+  if (entry.userId !== ctx.userId && ctx.role === "MEMBER") throw new Error("Forbidden");
+
+  return prisma.timeEntry.update({ where: { id }, data: input });
+}
+
+export async function deleteTimeEntry(ctx: TenantContext, id: string) {
+  const entry = await prisma.timeEntry.findFirst({ where: { id, tenantId: ctx.tenantId } });
+  if (!entry) throw new Error("Time entry not found");
+  if (entry.status === "LOCKED") throw new Error("Cannot delete a locked entry");
+  if (entry.status === "APPROVED") throw new Error("Cannot delete an approved entry; ask a manager to reject it first");
+  if (entry.userId !== ctx.userId && ctx.role === "MEMBER") throw new Error("Forbidden");
+  await prisma.timeEntry.delete({ where: { id } });
+}
+
+export async function submitTimeEntry(ctx: TenantContext, id: string) {
+  const entry = await prisma.timeEntry.findFirst({ where: { id, tenantId: ctx.tenantId } });
+  if (!entry) throw new Error("Time entry not found");
+  if (entry.userId !== ctx.userId && ctx.role === "MEMBER") throw new Error("Forbidden");
+  if (entry.status !== "DRAFT") throw new Error("Only drafts can be submitted");
+
+  return prisma.timeEntry.update({ where: { id }, data: { status: "SUBMITTED" } });
+}
+
+export async function approveTimeEntry(ctx: TenantContext, id: string) {
+  const entry = await prisma.timeEntry.findFirst({ where: { id, tenantId: ctx.tenantId } });
+  if (!entry) throw new Error("Time entry not found");
+  if (entry.status !== "SUBMITTED") throw new Error("Only submitted entries can be approved");
+
+  return prisma.timeEntry.update({
+    where: { id },
+    data: { status: "APPROVED", approvedBy: ctx.userId, approvedAt: new Date() },
+  });
+}
+
+export async function rejectTimeEntry(ctx: TenantContext, id: string) {
+  const entry = await prisma.timeEntry.findFirst({ where: { id, tenantId: ctx.tenantId } });
+  if (!entry) throw new Error("Time entry not found");
+  if (entry.status !== "SUBMITTED" && entry.status !== "APPROVED") {
+    throw new Error("Only submitted or approved entries can be rejected");
+  }
+
+  return prisma.timeEntry.update({
+    where: { id },
+    data: { status: "DRAFT", approvedBy: null, approvedAt: null },
   });
 }

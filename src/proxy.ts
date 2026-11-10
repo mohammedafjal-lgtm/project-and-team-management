@@ -1,16 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 
+const SKIP_PREFIXES = [
+  "/_next",
+  "/api/webhooks",
+  "/i/", // public invoice pages resolve by token and are host-agnostic
+];
+
 export async function proxy(request: NextRequest) {
-  console.log(
-    "[proxy]",
-    request.nextUrl.pathname,
-    "host=" + (request.headers.get("host") ?? "none")
-  );
+  const path = request.nextUrl.pathname;
+  if (SKIP_PREFIXES.some((p) => path.startsWith(p))) {
+    return NextResponse.next();
+  }
+
   const hostname = request.headers.get("host") || "";
   const requestHeaders = new Headers(request.headers);
 
-  // Strip inbound tenant headers — only the proxy may set them.
   requestHeaders.delete("x-tenant-id");
   requestHeaders.delete("x-tenant-slug");
 

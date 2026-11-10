@@ -2,6 +2,8 @@ import { getTenantContext } from "@/lib/tenancy/resolve";
 import { listTimeEntries } from "@/domains/time/time.repo";
 import { prisma } from "@/lib/db/prisma";
 import { TimeList } from "@/components/time/time-list";
+import { hasRole } from "@/lib/auth/permissions";
+import { Role } from "@prisma/client";
 
 export default async function TimePage() {
   const ctx = await getTenantContext();
@@ -19,6 +21,7 @@ export default async function TimePage() {
         <p className="text-sm text-neutral-500 mt-1">{entries.length} entries</p>
       </div>
       <TimeList
+        canApprove={hasRole(ctx.role, Role.MANAGER)}
         initialEntries={entries.map((e) => ({
           id: e.id,
           date: e.date.toISOString(),
