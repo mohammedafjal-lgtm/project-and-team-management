@@ -18,10 +18,12 @@ const fromEmail = isDev ? FROM_DEV : FROM_PROD;
 
 const resend = apiKey ? new Resend(apiKey) : null;
 
-export async function sendInvoiceEmail(input: {
+export async function sendEmail(input: {
   to: string;
   subject: string;
   html: string;
+  /** Shown in logs when the recipient is rewritten in development. */
+  originalPurpose?: string;
 }) {
   if (!resend) {
     console.warn(
@@ -40,7 +42,7 @@ export async function sendInvoiceEmail(input: {
       to = testRecipient;
     } else {
       console.warn(
-        "[resend:dev] RESEND_TEST_RECIPIENT is not set. Falling back to the invoice recipient. " +
+        "[resend:dev] RESEND_TEST_RECIPIENT is not set. Falling back to the original recipient. " +
           "This will only succeed if it matches the email on your Resend account. " +
           "Set RESEND_TEST_RECIPIENT in .env to your Resend account email to avoid 403s."
       );
@@ -52,9 +54,10 @@ export async function sendInvoiceEmail(input: {
   }
 
   if (isDev) {
+    const purpose = input.originalPurpose ?? "original";
     console.log(
       `[resend:dev] sending from=${fromEmail} to=${to}` +
-        (originalTo !== to ? ` (invoice originally to ${originalTo})` : "")
+        (originalTo !== to ? ` (${purpose} originally to ${originalTo})` : "")
     );
   }
 
@@ -83,4 +86,12 @@ export async function sendInvoiceEmail(input: {
   }
 
   return data;
+}
+
+export async function sendInvoiceEmail(input: {
+  to: string;
+  subject: string;
+  html: string;
+}) {
+  return sendEmail({ ...input, originalPurpose: "invoice" });
 }

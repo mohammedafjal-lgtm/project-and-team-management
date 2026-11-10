@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,7 +37,7 @@ export default function LoginPage() {
     <div className="w-full max-w-sm">
       <h1 className="text-2xl font-semibold tracking-tight mb-1">Sign in</h1>
       <p className="text-sm text-neutral-500 mb-8">
-        Welcome back. Enter your details to continue.
+        Access is by invitation only. Enter your credentials to continue.
       </p>
 
       <form onSubmit={onSubmit} className="space-y-4">
@@ -69,13 +68,6 @@ export default function LoginPage() {
           {loading ? "Signing in…" : "Sign in"}
         </Button>
       </form>
-
-      <p className="mt-6 text-sm text-neutral-500 text-center">
-        No account?{" "}
-        <Link href="/signup" className="underline underline-offset-4 hover:text-neutral-900 dark:hover:text-neutral-100">
-          Create one
-        </Link>
-      </p>
     </div>
   );
 }

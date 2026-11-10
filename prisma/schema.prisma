@@ -55,6 +55,7 @@ model Tenant {
   updatedAt      DateTime @updatedAt
 
   memberships     Membership[]
+  invitations     Invitation[]
   clients         Client[]
   projects        Project[]
   timeEntries     TimeEntry[]
@@ -65,6 +66,23 @@ model Tenant {
   processedEvents ProcessedStripeEvent[]
 
   @@index([slug])
+}
+
+model Invitation {
+  id         String    @id @default(cuid())
+  tenantId   String
+  email      String
+  role       Role      @default(MEMBER)
+  token      String    @unique
+  invitedBy  String
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, email])
+  @@index([tenantId, acceptedAt])
 }
 
 model User {

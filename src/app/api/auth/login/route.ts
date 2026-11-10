@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db/prisma";
 import { verifyPassword } from "@/lib/auth/password";
-import { createSession } from "@/lib/auth/session";
+import { setSessionCookie } from "@/lib/auth/session";
 import { tenantUrl } from "@/lib/auth/tenant-redirect";
 
 const Body = z.object({
@@ -31,7 +31,11 @@ export async function POST(req: Request) {
   const target = tenantSlug ? memberships.find((m) => m.tenant.slug === tenantSlug) : memberships[0];
   if (!target) return NextResponse.json({ message: "You are not a member of this tenant" }, { status: 403 });
 
-  await createSession({ userId: user.id, email: user.email, activeTenantId: target.tenantId });
-
-  return NextResponse.json({ redirectTo: tenantUrl(target.tenant.slug) });
+  const response = NextResponse.json({ redirectTo: tenantUrl(target.tenant.slug) });
+  await setSessionCookie(response, {
+    userId: user.id,
+    email: user.email,
+    activeTenantId: target.tenantId,
+  });
+  return response;
 }
