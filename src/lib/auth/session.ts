@@ -11,10 +11,14 @@ export type SessionPayload = {
 };
 
 function cookieDomain(): string | undefined {
-  if (process.env.NODE_ENV !== "production") return undefined;
-  const root = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "";
+  const root =
+    process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? process.env.ROOT_DOMAIN ?? "";
   const host = root.split(":")[0];
-  return host ? `.${host}` : undefined;
+  if (!host) return undefined;
+  // IPv4 doesn't support subdomain cookies; subdomain routing won't work either.
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) return undefined;
+  // `.localhost` is accepted by modern browsers and shares across *.localhost.
+  return `.${host}`;
 }
 
 export async function createSession(payload: SessionPayload) {
@@ -46,5 +50,15 @@ export async function getSession(): Promise<SessionPayload | null> {
 }
 
 export async function destroySession() {
-  (await cookies()).delete(SESSION_COOKIE);
+  // Use set() with maxAge: 0 so we clear the same Domain/Secure/Path attributes
+  // the cookie was originally set with. Plain cookies().delete() deletes a
+  // host-only cookie and leaves the production domain cookie behind.
+  (await cookies()).set(SESSION_COOKIE, "", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    domain: cookieDomain(),
+    path: "/",
+    maxAge: 0,
+  });
 }

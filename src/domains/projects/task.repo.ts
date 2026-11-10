@@ -22,6 +22,13 @@ export async function createTask(
   ctx: TenantContext,
   input: { projectId: string; title: string; description?: string; status?: "TODO" | "IN_PROGRESS" | "DONE" }
 ) {
+  // Verify the project belongs to this tenant before creating the task.
+  const project = await prisma.project.findFirst({
+    where: { id: input.projectId, tenantId: ctx.tenantId },
+    select: { id: true },
+  });
+  if (!project) throw new Error("Project not found");
+
   return prisma.task.create({
     data: {
       tenantId: ctx.tenantId,

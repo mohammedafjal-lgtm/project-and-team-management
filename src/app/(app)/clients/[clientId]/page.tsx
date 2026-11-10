@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db/prisma";
 import { money } from "@/lib/money";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { formatDate } from "@/lib/date";
 
 export default async function ClientDetailPage({ params }: { params: Promise<{ clientId: string }> }) {
   const { clientId } = await params;
@@ -76,7 +77,7 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ c
                       </Link>
                     </td>
                     <td className="px-4 py-3"><Badge variant="outline">{p.status}</Badge></td>
-                    <td className="px-4 py-3 text-neutral-500">{p.createdAt.toLocaleDateString()}</td>
+                    <td className="px-4 py-3 text-neutral-500">{formatDate(p.createdAt)}</td>
                   </tr>
                 ))}
               </tbody>

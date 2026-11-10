@@ -88,7 +88,7 @@ export function CommandPalette() {
         {data?.projects.length ? (
           <CommandGroup heading="Projects">
             {data.projects.map((p) => (
-              <CommandItem key={p.id} onSelect={() => go(`/projects/${p.id}`)}>{p.name}</CommandItem>
+              <CommandItem key={p.id} onSelect={() => go(`/projects/${p.id}/board`)}>{p.name}</CommandItem>
             ))}
           </CommandGroup>
         ) : null}

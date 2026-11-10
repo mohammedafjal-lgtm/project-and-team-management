@@ -3,6 +3,7 @@ import { getTenantContext } from "@/lib/tenancy/resolve";
 import { prisma } from "@/lib/db/prisma";
 import { InvoiceActions } from "@/components/invoices/invoice-actions";
 import { money } from "@/lib/money";
+import { formatDate } from "@/lib/date";
 
 export default async function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -21,7 +22,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           <h1 className="text-2xl font-semibold tracking-tight">#{invoice.number}</h1>
           <p className="text-sm text-neutral-500 mt-1">
             {invoice.client.name} · {invoice.status} · due{" "}
-            {invoice.dueDate.toLocaleDateString()}
+            {formatDate(invoice.dueDate)}
           </p>
         </div>
         <InvoiceActions id={invoice.id} status={invoice.status} />

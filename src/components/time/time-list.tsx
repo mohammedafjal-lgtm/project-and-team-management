@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { formatDate } from "@/lib/date";
 
 type Entry = {
   id: string; date: string; durationMinutes: number; billable: boolean;
@@ -43,7 +44,7 @@ export function TimeList({ initialEntries, projects }: { initialEntries: Entry[]
         date: form.date,
         durationMinutes: Math.round(form.hours * 60),
         billable: true,
-        rateCentsSnapshot: project.defaultRateCents,
+        // rateCentsSnapshot intentionally omitted — server derives it.
         notes: form.notes || undefined,
       });
     },
@@ -114,7 +115,7 @@ export function TimeList({ initialEntries, projects }: { initialEntries: Entry[]
               <tr><td colSpan={5} className="px-4 py-8 text-center text-neutral-500">No time logged yet.</td></tr>
             ) : entries.map((e) => (
               <tr key={e.id} className="border-t border-neutral-200 dark:border-neutral-800">
-                <td className="px-4 py-3">{new Date(e.date).toLocaleDateString()}</td>
+                <td className="px-4 py-3">{formatDate(e.date)}</td>
                 <td className="px-4 py-3">{e.projectName}</td>
                 <td className="px-4 py-3">{e.userName}</td>
                 <td className="px-4 py-3 text-right">{(e.durationMinutes / 60).toFixed(2)}</td>

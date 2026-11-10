@@ -1,17 +1,17 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { TenantContext } from "@/lib/tenancy/context";
 import { AccountType } from "@prisma/client";
 
 export const SYSTEM_ACCOUNTS = {
-  CASH: { code: "1000", name: "Cash", type: AccountType.ASSET, normalBalance: "DEBIT" },
-  AR: { code: "1100", name: "Accounts Receivable", type: AccountType.ASSET, normalBalance: "DEBIT" },
-  TAX_PAYABLE: { code: "2100", name: "Tax Payable", type: AccountType.LIABILITY, normalBalance: "CREDIT" },
-  REVENUE: { code: "4000", name: "Service Revenue", type: AccountType.REVENUE, normalBalance: "CREDIT" },
+  CASH:        { code: "1000", name: "Cash",               type: AccountType.ASSET,   normalBalance: "DEBIT"  },
+  AR:          { code: "1100", name: "Accounts Receivable", type: AccountType.ASSET,   normalBalance: "DEBIT"  },
+  TAX_PAYABLE: { code: "2100", name: "Tax Payable",         type: AccountType.LIABILITY, normalBalance: "CREDIT" },
+  REVENUE:     { code: "4000", name: "Service Revenue",     type: AccountType.REVENUE, normalBalance: "CREDIT" },
 } as const;
 
-/**
- * Ensures the tenant has the system chart of accounts.
- */
+type Db = Prisma.TransactionClient;
+
 export async function ensureChartOfAccounts(ctx: TenantContext) {
   for (const account of Object.values(SYSTEM_ACCOUNTS)) {
     await prisma.ledgerAccount.upsert({
@@ -32,6 +32,10 @@ export async function ensureChartOfAccounts(ctx: TenantContext) {
 /**
  * Posts a balanced journal entry. Throws if debits !== credits.
  * This is the ONLY way ledger lines are created.
+ *
+ * `db` must be the transaction client when this is called from inside a
+ * prisma.$transaction(...) so the ledger is committed atomically with the
+ * business write that produced it.
  */
 export async function postJournalEntry(
   ctx: TenantContext,
@@ -41,48 +45,47 @@ export async function postJournalEntry(
     referenceType: string;
     referenceId: string;
     lines: { accountCode: string; debitCents?: number; creditCents?: number; memo?: string }[];
-  }
+  },
+  db: Db = prisma
 ) {
-  const totalDebit = input.lines.reduce((sum, l) => sum + (l.debitCents ?? 0), 0);
+  const totalDebit  = input.lines.reduce((sum, l) => sum + (l.debitCents ?? 0), 0);
   const totalCredit = input.lines.reduce((sum, l) => sum + (l.creditCents ?? 0), 0);
 
   if (totalDebit !== totalCredit) {
     throw new Error(`Unbalanced journal: debits ${totalDebit} !== credits ${totalCredit}`);
   }
 
-  const accounts = await prisma.ledgerAccount.findMany({
+  const accounts = await db.ledgerAccount.findMany({
     where: { tenantId: ctx.tenantId, code: { in: input.lines.map((l) => l.accountCode) } },
   });
   const accountMap = new Map(accounts.map((a) => [a.code, a.id]));
 
-  return prisma.$transaction(async (tx) => {
-    const journal = await tx.journalEntry.create({
+  const journal = await db.journalEntry.create({
+    data: {
+      tenantId: ctx.tenantId,
+      date: input.date,
+      description: input.description,
+      referenceType: input.referenceType,
+      referenceId: input.referenceId,
+      status: "POSTED",
+      createdBy: ctx.userId,
+    },
+  });
+
+  for (const line of input.lines) {
+    const accountId = accountMap.get(line.accountCode);
+    if (!accountId) throw new Error(`Account ${line.accountCode} not found`);
+    await db.journalLine.create({
       data: {
         tenantId: ctx.tenantId,
-        date: input.date,
-        description: input.description,
-        referenceType: input.referenceType,
-        referenceId: input.referenceId,
-        status: "POSTED",
-        createdBy: ctx.userId,
+        journalEntryId: journal.id,
+        accountId,
+        debitCents: line.debitCents ?? 0,
+        creditCents: line.creditCents ?? 0,
+        memo: line.memo,
       },
     });
+  }
 
-    for (const line of input.lines) {
-      const accountId = accountMap.get(line.accountCode);
-      if (!accountId) throw new Error(`Account ${line.accountCode} not found`);
-      await tx.journalLine.create({
-        data: {
-          tenantId: ctx.tenantId,
-          journalEntryId: journal.id,
-          accountId,
-          debitCents: line.debitCents ?? 0,
-          creditCents: line.creditCents ?? 0,
-          memo: line.memo,
-        },
-      });
-    }
-
-    return journal;
-  });
+  return journal;
 }

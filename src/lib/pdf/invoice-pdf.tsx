@@ -1,4 +1,5 @@
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
+import { formatDate } from "@/lib/date";
 
 const styles = StyleSheet.create({
   page: { padding: 48, fontSize: 10, fontFamily: "Helvetica", color: "#111" },
@@ -54,8 +55,8 @@ export function InvoicePdf({ data }: { data: InvoicePdfData }) {
         </View>
 
         <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-          <Text style={styles.muted}>Issued {data.issueDate.toLocaleDateString()}</Text>
-          <Text style={styles.muted}>Due {data.dueDate.toLocaleDateString()}</Text>
+          <Text style={styles.muted}>Issued {formatDate(data.issueDate)}</Text>
+          <Text style={styles.muted}>Due {formatDate(data.dueDate)}</Text>
         </View>
 
         <View style={styles.table}>

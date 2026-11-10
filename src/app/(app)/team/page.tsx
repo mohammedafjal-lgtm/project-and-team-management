@@ -1,6 +1,7 @@
 import { getTenantContext } from "@/lib/tenancy/resolve";
 import { prisma } from "@/lib/db/prisma";
 import { Badge } from "@/components/ui/badge";
+import { formatDate } from "@/lib/date";
 
 export default async function TeamPage() {
   const ctx = await getTenantContext();
@@ -42,7 +43,7 @@ export default async function TeamPage() {
                   </Badge>
                 </td>
                 <td className="px-4 py-3 text-neutral-500">
-                  {m.createdAt.toLocaleDateString()}
+                  {formatDate(m.createdAt)}
                 </td>
               </tr>
             ))}

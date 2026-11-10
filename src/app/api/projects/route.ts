@@ -3,6 +3,8 @@ import { z } from "zod";
 import { headers } from "next/headers";
 import { requireTenantContext } from "@/lib/tenancy/context";
 import { prisma } from "@/lib/db/prisma";
+import { hasRole } from "@/lib/auth/permissions";
+import { Role } from "@prisma/client";
 
 const Body = z.object({
   name: z.string().min(1).max(100),
@@ -17,12 +19,12 @@ const Body = z.object({
 export async function POST(req: Request) {
   const h = await headers();
   const ctx = await requireTenantContext(h.get("x-tenant-id"));
+  if (!hasRole(ctx.role, Role.MANAGER)) {
+    return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+  }
   const parsed = Body.safeParse(await req.json());
   if (!parsed.success) {
-    return NextResponse.json(
-      { message: "Invalid input", issues: parsed.error.flatten() },
-      { status: 400 }
-    );
+    return NextResponse.json({ message: "Invalid input", issues: parsed.error.flatten() }, { status: 400 });
   }
   const { clientId, code, ...rest } = parsed.data;
 
@@ -34,12 +36,7 @@ export async function POST(req: Request) {
   }
 
   const project = await prisma.project.create({
-    data: {
-      ...rest,
-      code: code || null,
-      clientId,
-      tenantId: ctx.tenantId,
-    },
+    data: { ...rest, code: code || null, clientId, tenantId: ctx.tenantId },
   });
   return NextResponse.json(project);
 }

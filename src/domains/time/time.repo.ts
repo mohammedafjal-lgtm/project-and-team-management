@@ -30,6 +30,13 @@ export async function createTimeEntry(
     notes?: string;
   }
 ) {
+  // Verify the project belongs to this tenant before creating the entry.
+  const project = await prisma.project.findFirst({
+    where: { id: input.projectId, tenantId: ctx.tenantId },
+    select: { id: true },
+  });
+  if (!project) throw new Error("Project not found");
+
   return prisma.timeEntry.create({
     data: {
       ...input,

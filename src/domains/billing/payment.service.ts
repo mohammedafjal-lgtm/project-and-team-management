@@ -48,19 +48,28 @@ export async function applyPaymentToInvoice(input: {
 
     await tx.invoice.update({
       where: { id: invoice.id },
-      data: { amountPaidCents: newPaid, status: newStatus, paidAt: newStatus === "PAID" ? new Date() : null },
+      data: {
+        amountPaidCents: newPaid,
+        status: newStatus,
+        // Preserve an existing paidAt; set it only on the transition to PAID.
+        paidAt: newStatus === "PAID" ? (invoice.paidAt ?? new Date()) : invoice.paidAt,
+      },
     });
 
-    await postJournalEntry(ctx, {
-      date: new Date(),
-      description: `Payment for invoice ${invoice.number}`,
-      referenceType: "PAYMENT",
-      referenceId: payment.id,
-      lines: [
-        { accountCode: SYSTEM_ACCOUNTS.CASH.code, debitCents: input.amountCents },
-        { accountCode: SYSTEM_ACCOUNTS.AR.code, creditCents: input.amountCents },
-      ],
-    });
+    await postJournalEntry(
+      ctx,
+      {
+        date: new Date(),
+        description: `Payment for invoice ${invoice.number}`,
+        referenceType: "PAYMENT",
+        referenceId: payment.id,
+        lines: [
+          { accountCode: SYSTEM_ACCOUNTS.CASH.code, debitCents: input.amountCents },
+          { accountCode: SYSTEM_ACCOUNTS.AR.code,   creditCents: input.amountCents },
+        ],
+      },
+      tx
+    );
 
     return payment;
   });

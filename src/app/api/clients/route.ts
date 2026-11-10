@@ -3,6 +3,8 @@ import { z } from "zod";
 import { headers } from "next/headers";
 import { requireTenantContext } from "@/lib/tenancy/context";
 import { prisma } from "@/lib/db/prisma";
+import { hasRole } from "@/lib/auth/permissions";
+import { Role } from "@prisma/client";
 
 const Body = z.object({
   name: z.string().min(1).max(100),
@@ -26,20 +28,16 @@ export async function GET() {
 export async function POST(req: Request) {
   const h = await headers();
   const ctx = await requireTenantContext(h.get("x-tenant-id"));
+  if (!hasRole(ctx.role, Role.MANAGER)) {
+    return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+  }
   const parsed = Body.safeParse(await req.json());
   if (!parsed.success) {
-    return NextResponse.json(
-      { message: "Invalid input", issues: parsed.error.flatten() },
-      { status: 400 }
-    );
+    return NextResponse.json({ message: "Invalid input", issues: parsed.error.flatten() }, { status: 400 });
   }
   const { email, ...rest } = parsed.data;
   const client = await prisma.client.create({
-    data: {
-      ...rest,
-      email: email ?? null,
-      tenantId: ctx.tenantId,
-    },
+    data: { ...rest, email: email ?? null, tenantId: ctx.tenantId },
   });
   return NextResponse.json(client);
 }

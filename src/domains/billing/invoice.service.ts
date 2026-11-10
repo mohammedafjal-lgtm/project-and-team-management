@@ -4,6 +4,7 @@ import { ensureChartOfAccounts, postJournalEntry, SYSTEM_ACCOUNTS } from "@/doma
 import { allocateTax } from "./tax";
 import { sendInvoiceEmail } from "@/lib/email/resend";
 import { renderInvoiceEmail } from "@/lib/email/templates/invoice";
+import { tenantUrl } from "@/lib/auth/tenant-redirect";
 
 /**
  * Computes totals deterministically from line items + tax rate.
@@ -27,7 +28,7 @@ export async function issueInvoice(ctx: TenantContext, invoiceId: string) {
   return prisma.$transaction(async (tx) => {
     const invoice = await tx.invoice.findFirst({
       where: { id: invoiceId, tenantId: ctx.tenantId },
-      include: { lineItems: true, client: true },
+      include: { lineItems: true, client: true, tenant: true }, // Added tenant: true
     });
     if (!invoice) throw new Error("Invoice not found");
     if (invoice.status !== "DRAFT") throw new Error("Only draft invoices can be issued");
@@ -59,12 +60,14 @@ export async function issueInvoice(ctx: TenantContext, invoiceId: string) {
       referenceType: "INVOICE",
       referenceId: invoice.id,
       lines,
-    });
+    }, tx); // Added tx to ensure atomicity
 
     // Send email outside the transaction so a mail failure does not roll back
     // financial state. Failure is logged and the invoice is still SENT.
     try {
-      const pdfUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/invoices/${invoice.id}/pdf`;
+      // Use tenantUrl so the PDF link points to the subdomain, not localhost root
+      const pdfUrl = tenantUrl(invoice.tenant.slug, `/api/invoices/${invoice.id}/pdf`);
+      
       const { html, subject } = await renderInvoiceEmail({
         clientName: invoice.client.name,
         invoiceNumber: invoice.number,

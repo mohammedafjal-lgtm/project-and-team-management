@@ -17,7 +17,6 @@ export async function POST(req: NextRequest) {
     return new NextResponse("Bad signature", { status: 400 });
   }
 
-  // Durable idempotency: unique constraint on event ID.
   const existing = await prisma.processedStripeEvent.findUnique({ where: { id: event.id } });
   if (existing) return NextResponse.json({ received: true, duplicate: true });
 
@@ -27,10 +26,23 @@ export async function POST(req: NextRequest) {
     switch (event.type) {
       case "payment_intent.succeeded": {
         const pi = event.data.object as Stripe.PaymentIntent;
-        tenantId = pi.metadata.tenantId;
+        const metaTenantId  = pi.metadata?.tenantId;
+        const metaInvoiceId = pi.metadata?.invoiceId;
+
+        // If the PaymentIntent is missing our metadata, we cannot apply it.
+        // Record the event as processed so Stripe stops retrying — this is a
+        // data bug on the creating side, not a transient failure.
+        if (!metaTenantId || !metaInvoiceId) {
+          console.warn(
+            `[stripe] payment_intent.succeeded ${pi.id} missing tenantId/invoiceId metadata; skipping`
+          );
+          break;
+        }
+
+        tenantId = metaTenantId;
         await applyPaymentToInvoice({
-          tenantId: pi.metadata.tenantId,
-          invoiceId: pi.metadata.invoiceId,
+          tenantId: metaTenantId,
+          invoiceId: metaInvoiceId,
           amountCents: pi.amount_received,
           method: "STRIPE",
           reference: pi.id,
@@ -45,8 +57,8 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({ received: true });
-  } catch {
-    // Do not mark as processed so Stripe retries.
+  } catch (err) {
+    console.error("[stripe] handler failed", err);
     return new NextResponse("Webhook handler failed", { status: 500 });
   }
 }
