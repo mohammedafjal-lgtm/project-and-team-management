@@ -61,6 +61,7 @@ export async function updateTimeEntry(
   const entry = await prisma.timeEntry.findFirst({ where: { id, tenantId: ctx.tenantId } });
   if (!entry) throw new Error("Time entry not found");
   if (entry.status === "LOCKED") throw new Error("Time entry is locked (on an invoice)");
+  if (entry.status !== "DRAFT") throw new Error("Only draft entries can be edited");
   // Members can only edit their own drafts
   if (entry.userId !== ctx.userId && ctx.role === "MEMBER") throw new Error("Forbidden");
 

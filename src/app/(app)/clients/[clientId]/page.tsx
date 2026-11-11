@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Role } from "@prisma/client";
 import { getTenantContext } from "@/lib/tenancy/resolve";
 import { prisma } from "@/lib/db/prisma";
 import { money } from "@/lib/money";
+import { hasRole } from "@/lib/auth/permissions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/date";
@@ -20,19 +22,31 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ c
   });
   if (!client) notFound();
 
+  const canEdit = hasRole(ctx.role, Role.MANAGER);
+
   return (
     <div className="space-y-8 max-w-4xl">
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs text-neutral-500 uppercase tracking-wider">Client</p>
           <h1 className="text-2xl font-semibold tracking-tight">{client.name}</h1>
           {client.email ? (
             <p className="text-sm text-neutral-500 mt-1">{client.email}</p>
           ) : null}
+          {client.billingAddress ? (
+            <p className="text-sm text-neutral-500 mt-1 whitespace-pre-line">{client.billingAddress}</p>
+          ) : null}
         </div>
-        <Button asChild>
-          <Link href={`/projects/new?clientId=${client.id}`}>New project</Link>
-        </Button>
+        <div className="flex gap-2">
+          {canEdit ? (
+            <Button variant="outline" asChild>
+              <Link href={`/clients/${client.id}/edit`}>Edit</Link>
+            </Button>
+          ) : null}
+          <Button asChild>
+            <Link href={`/projects/new?clientId=${client.id}`}>New project</Link>
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-3 gap-4 text-sm">

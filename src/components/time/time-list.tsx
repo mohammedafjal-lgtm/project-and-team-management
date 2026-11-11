@@ -55,6 +55,13 @@ export function TimeList({
     notes: "",
     billable: true,
   });
+  const [editing, setEditing] = useState<Entry | null>(null);
+  const [editForm, setEditForm] = useState({
+    date: new Date().toISOString().slice(0, 10),
+    hours: 1,
+    notes: "",
+    billable: true,
+  });
 
   const invalidate = () => qc.invalidateQueries({ queryKey: qKey });
 
@@ -75,6 +82,24 @@ export function TimeList({
       toast.success("Time logged");
       setOpen(false);
       setForm((f) => ({ ...f, notes: "", hours: 1, billable: true }));
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+
+  const saveEdit = useMutation({
+    mutationFn: async () => {
+      if (!editing) return;
+      await api.patch(`/time/${editing.id}`, {
+        date: editForm.date,
+        durationMinutes: Math.round(editForm.hours * 60),
+        billable: editForm.billable,
+        notes: editForm.notes || null,
+      });
+    },
+    onSuccess: () => {
+      invalidate();
+      toast.success("Time entry updated");
+      setEditing(null);
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
@@ -101,10 +126,23 @@ export function TimeList({
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
 
+  function openEdit(entry: Entry) {
+    setEditing(entry);
+    setEditForm({
+      date: entry.date.slice(0, 10),
+      hours: Math.round((entry.durationMinutes / 60) * 100) / 100,
+      notes: entry.notes ?? "",
+      billable: entry.billable,
+    });
+  }
+
   function actions(entry: Entry) {
     if (entry.status === "DRAFT") {
       return (
         <div className="flex gap-1">
+          <Button size="xs" variant="outline" onClick={() => openEdit(entry)}>
+            Edit
+          </Button>
           <Button
             size="xs"
             variant="outline"
@@ -174,6 +212,59 @@ export function TimeList({
               </label>
               <Button onClick={() => create.mutate()} disabled={create.isPending} className="w-full">
                 {create.isPending ? "Saving…" : "Save entry"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={Boolean(editing)} onOpenChange={(isOpen) => { if (!isOpen) setEditing(null); }}>
+          <DialogContent>
+            <DialogHeader><DialogTitle>Edit time entry</DialogTitle></DialogHeader>
+            <div className="space-y-4">
+              {editing ? (
+                <p className="text-sm text-neutral-500">{editing.projectName}</p>
+              ) : null}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Date</Label>
+                  <Input
+                    type="date"
+                    value={editForm.date}
+                    onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Hours</Label>
+                  <Input
+                    type="number"
+                    min={0.25}
+                    step={0.25}
+                    value={editForm.hours}
+                    onChange={(e) => setEditForm({ ...editForm, hours: Number(e.target.value) })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Notes</Label>
+                <Input
+                  value={editForm.notes}
+                  onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                />
+              </div>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={editForm.billable}
+                  onChange={(e) => setEditForm({ ...editForm, billable: e.target.checked })}
+                />
+                Billable
+              </label>
+              <Button
+                onClick={() => saveEdit.mutate()}
+                disabled={saveEdit.isPending || editForm.hours < 0.25}
+                className="w-full"
+              >
+                {saveEdit.isPending ? "Saving…" : "Save changes"}
               </Button>
             </div>
           </DialogContent>
