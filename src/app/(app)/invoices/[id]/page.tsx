@@ -4,14 +4,21 @@ import { prisma } from "@/lib/db/prisma";
 import { InvoiceActions } from "@/components/invoices/invoice-actions";
 import { money } from "@/lib/money";
 import { formatDate } from "@/lib/date";
+import { canManageBilling } from "@/lib/auth/permissions";
 
 export default async function InvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const ctx = await getTenantContext();
-  const invoice = await prisma.invoice.findFirst({
-    where: { id, tenantId: ctx.tenantId },
-    include: { client: true, lineItems: { orderBy: { sortOrder: "asc" } } },
-  });
+  const [invoice, zoho] = await Promise.all([
+    prisma.invoice.findFirst({
+      where: { id, tenantId: ctx.tenantId },
+      include: { client: true, lineItems: { orderBy: { sortOrder: "asc" } } },
+    }),
+    prisma.zohoConnection.findUnique({
+      where: { tenantId: ctx.tenantId },
+      select: { tenantId: true },
+    }),
+  ]);
   if (!invoice) notFound();
 
   return (
@@ -24,6 +31,11 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
             {invoice.client.name} · {invoice.status} · due{" "}
             {formatDate(invoice.dueDate)}
           </p>
+          {invoice.zohoInvoiceId ? (
+            <p className="mt-2 text-xs text-neutral-500">
+              Linked Zoho invoice: {invoice.zohoInvoiceNumber ?? invoice.zohoInvoiceId}
+            </p>
+          ) : null}
           {invoice.publicToken ? (
             <a
               href={`/i/${invoice.publicToken}`}
@@ -41,6 +53,10 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           totalCents={invoice.totalCents}
           amountPaidCents={invoice.amountPaidCents}
           currency={invoice.currency}
+          zohoInvoiceId={invoice.zohoInvoiceId}
+          zohoInvoiceNumber={invoice.zohoInvoiceNumber}
+          zohoConnected={Boolean(zoho)}
+          canManageBilling={canManageBilling(ctx.role)}
         />
       </div>
 

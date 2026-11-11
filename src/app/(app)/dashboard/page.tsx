@@ -1,10 +1,13 @@
 import { getTenantContext } from "@/lib/tenancy/resolve";
 import { prisma } from "@/lib/db/prisma";
 import { money } from "@/lib/money";
+import { visibleProjectWhere } from "@/domains/projects/project-access";
+import type { TenantContext } from "@/lib/tenancy/context";
 
-async function metrics(tenantId: string) {
+async function metrics(ctx: TenantContext) {
+  const tenantId = ctx.tenantId;
   const [projects, unpaid, timeThisWeek, revenue] = await Promise.all([
-    prisma.project.count({ where: { tenantId, status: "ACTIVE" } }),
+    prisma.project.count({ where: { ...visibleProjectWhere(ctx), status: "ACTIVE" } }),
     prisma.invoice.findMany({
       where: { tenantId, status: { in: ["SENT", "VIEWED", "PARTIALLY_PAID", "OVERDUE"] } },
       select: { totalCents: true, amountPaidCents: true },
@@ -38,7 +41,7 @@ function Card({ label, value, hint }: { label: string; value: string; hint?: str
 
 export default async function DashboardPage() {
   const ctx = await getTenantContext();
-  const m = await metrics(ctx.tenantId);
+  const m = await metrics(ctx);
 
   return (
     <div className="space-y-8">

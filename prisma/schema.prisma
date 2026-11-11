@@ -45,6 +45,16 @@ enum JournalStatus {
   REVERSED
 }
 
+enum ProjectVisibility {
+  PUBLIC
+  PRIVATE
+}
+
+enum ProjectRole {
+  ADMIN
+  MEMBER
+}
+
 model Tenant {
   id             String   @id @default(cuid())
   slug           String   @unique
@@ -58,12 +68,14 @@ model Tenant {
   invitations     Invitation[]
   clients         Client[]
   projects        Project[]
+  projectMembers  ProjectMember[]
   timeEntries     TimeEntry[]
   invoices        Invoice[]
   payments        Payment[]
   accounts        LedgerAccount[]
   journals        JournalEntry[]
   processedEvents ProcessedStripeEvent[]
+  zohoConnection  ZohoConnection?
 
   @@index([slug])
 }
@@ -95,8 +107,9 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  memberships Membership[]
-  timeEntries TimeEntry[]
+  memberships    Membership[]
+  timeEntries    TimeEntry[]
+  projectMembers ProjectMember[]
 }
 
 model Membership {
@@ -126,6 +139,7 @@ model Client {
   currency         String   @default("USD")
   defaultRateCents Int      @default(0)
   taxRateBps       Int      @default(0)
+  zohoCustomerId   String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -137,27 +151,48 @@ model Client {
 }
 
 model Project {
-  id            String    @id @default(cuid())
+  id            String            @id @default(cuid())
   tenantId      String
   clientId      String
   name          String
   code          String?
-  status        String    @default("ACTIVE")
-  budgetType    String    @default("NONE") // NONE | HOURS | AMOUNT
+  status        String            @default("ACTIVE")
+  visibility    ProjectVisibility @default(PUBLIC)
+  budgetType    String            @default("NONE") // NONE | HOURS | AMOUNT
   budgetMinutes Int?
   budgetCents   Int?
   startDate     DateTime?
   endDate       DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
 
-  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  client      Client      @relation(fields: [clientId], references: [id])
+  tenant      Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  client      Client          @relation(fields: [clientId], references: [id])
   tasks       Task[]
   timeEntries TimeEntry[]
+  members     ProjectMember[]
 
   @@unique([tenantId, code])
   @@index([tenantId, clientId, status])
+  @@index([tenantId, visibility])
+}
+
+model ProjectMember {
+  id        String      @id @default(cuid())
+  tenantId  String
+  projectId String
+  userId    String
+  role      ProjectRole @default(MEMBER)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([tenantId, userId])
+  @@index([tenantId, projectId])
 }
 
 model Task {
@@ -227,6 +262,8 @@ model Invoice {
   stripePaymentIntentId String?
   stripeSessionId       String?
   publicToken           String?       @unique
+  zohoInvoiceId         String?
+  zohoInvoiceNumber     String?
   sentAt                DateTime?
   viewedAt              DateTime?
   paidAt                DateTime?
@@ -243,6 +280,21 @@ model Invoice {
   @@unique([tenantId, number])
   @@index([tenantId, clientId, status])
   @@index([tenantId, status, dueDate])
+}
+
+model ZohoConnection {
+  tenantId        String   @id
+  organizationId  String
+  accountsBaseUrl String
+  apiBaseUrl      String
+  accessTokenEnc  String
+  refreshTokenEnc String
+  expiresAt       DateTime
+  connectedAt     DateTime @default(now())
+  connectedBy     String
+  updatedAt       DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 }
 
 model InvoiceLineItem {

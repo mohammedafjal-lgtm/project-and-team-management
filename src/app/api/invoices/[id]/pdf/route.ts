@@ -1,15 +1,13 @@
 import { NextResponse } from "next/server";
-import { headers } from "next/headers";
 import { renderToBuffer } from "@react-pdf/renderer";
-import { requireTenantContext } from "@/lib/tenancy/context";
+import { requireApiTenantContext } from "@/lib/tenancy/resolve";
 import { prisma } from "@/lib/db/prisma";
 import { InvoicePdf } from "@/lib/pdf/invoice-pdf";
 
 export const runtime = "nodejs";
 
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
-  const h = await headers();
-  const ctx = await requireTenantContext(h.get("x-tenant-id"));
+  const ctx = await requireApiTenantContext();
   const { id } = await params;
 
   const invoice = await prisma.invoice.findFirst({
@@ -26,6 +24,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
         clientEmail: invoice.client.email,
         clientAddress: invoice.client.billingAddress,
         number: invoice.number,
+        status: invoice.status,
         issueDate: invoice.issueDate,
         dueDate: invoice.dueDate,
         currency: invoice.currency,
@@ -38,6 +37,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
         subtotalCents: invoice.subtotalCents,
         taxCents: invoice.taxCents,
         totalCents: invoice.totalCents,
+        amountPaidCents: invoice.amountPaidCents,
       },
     })
   );

@@ -1,16 +1,12 @@
 import Link from "next/link";
 import { getTenantContext } from "@/lib/tenancy/resolve";
-import { prisma } from "@/lib/db/prisma";
+import { listProjects } from "@/domains/projects/project.repo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
 export default async function ProjectsPage() {
   const ctx = await getTenantContext();
-  const projects = await prisma.project.findMany({
-    where: { tenantId: ctx.tenantId },
-    include: { client: true, _count: { select: { tasks: true } } },
-    orderBy: { updatedAt: "desc" },
-  });
+  const projects = await listProjects(ctx);
 
   return (
     <div className="space-y-6">
@@ -35,6 +31,7 @@ export default async function ProjectsPage() {
               <tr>
                 <th className="px-4 py-2 font-medium">Name</th>
                 <th className="px-4 py-2 font-medium">Client</th>
+                <th className="px-4 py-2 font-medium">Visibility</th>
                 <th className="px-4 py-2 font-medium">Status</th>
                 <th className="px-4 py-2 font-medium">Tasks</th>
               </tr>
@@ -46,6 +43,7 @@ export default async function ProjectsPage() {
                     <Link href={`/projects/${p.id}/board`} className="font-medium hover:underline">{p.name}</Link>
                   </td>
                   <td className="px-4 py-3 text-neutral-600 dark:text-neutral-400">{p.client.name}</td>
+                  <td className="px-4 py-3"><Badge variant="outline">{p.visibility}</Badge></td>
                   <td className="px-4 py-3"><Badge variant="outline">{p.status}</Badge></td>
                   <td className="px-4 py-3 text-neutral-600 dark:text-neutral-400">{p._count.tasks}</td>
                 </tr>

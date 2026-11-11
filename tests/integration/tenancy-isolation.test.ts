@@ -11,9 +11,9 @@ import { prisma } from "@/lib/db/prisma";
  * happily return data across tenants if the filter is omitted — the safety
  * comes from the repository layer, not from the DB).
  *
- * Request-layer isolation (subdomain → tenant, membership check, session
- * validation) is NOT tested here. That requires a live HTTP context and
- * belongs in a Playwright E2E test. Do not fake it in a Node test.
+ * Request-layer isolation (session activeTenantId → tenant, membership
+ * check) is NOT tested here. That requires a live HTTP context and belongs
+ * in a Playwright E2E test. Do not fake it in a Node test.
  */
 describe("tenant isolation (data layer)", () => {
   let tenantA: { id: string; slug: string };

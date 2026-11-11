@@ -53,6 +53,7 @@ export function TimeList({
     date: new Date().toISOString().slice(0, 10),
     hours: 1,
     notes: "",
+    billable: true,
   });
 
   const invalidate = () => qc.invalidateQueries({ queryKey: qKey });
@@ -65,7 +66,7 @@ export function TimeList({
         projectId: project.id,
         date: form.date,
         durationMinutes: Math.round(form.hours * 60),
-        billable: true,
+        billable: form.billable,
         notes: form.notes || undefined,
       });
     },
@@ -73,6 +74,7 @@ export function TimeList({
       invalidate();
       toast.success("Time logged");
       setOpen(false);
+      setForm((f) => ({ ...f, notes: "", hours: 1, billable: true }));
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
@@ -88,12 +90,32 @@ export function TimeList({
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
 
+  const toggleBillable = useMutation({
+    mutationFn: async ({ id, billable }: { id: string; billable: boolean }) => {
+      await api.patch(`/time/${id}`, { billable });
+    },
+    onSuccess: () => {
+      invalidate();
+      toast.success("Updated billable flag");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+
   function actions(entry: Entry) {
     if (entry.status === "DRAFT") {
       return (
-        <Button size="xs" variant="outline" onClick={() => action.mutate({ id: entry.id, action: "submit" })}>
-          Submit
-        </Button>
+        <div className="flex gap-1">
+          <Button
+            size="xs"
+            variant="outline"
+            onClick={() => toggleBillable.mutate({ id: entry.id, billable: !entry.billable })}
+          >
+            {entry.billable ? "Make non-billable" : "Make billable"}
+          </Button>
+          <Button size="xs" variant="outline" onClick={() => action.mutate({ id: entry.id, action: "submit" })}>
+            Submit
+          </Button>
+        </div>
       );
     }
     if (entry.status === "SUBMITTED" && canApprove) {
@@ -142,6 +164,14 @@ export function TimeList({
                 <Label>Notes</Label>
                 <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
               </div>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={form.billable}
+                  onChange={(e) => setForm({ ...form, billable: e.target.checked })}
+                />
+                Billable
+              </label>
               <Button onClick={() => create.mutate()} disabled={create.isPending} className="w-full">
                 {create.isPending ? "Saving…" : "Save entry"}
               </Button>
@@ -158,19 +188,25 @@ export function TimeList({
               <th className="px-4 py-2 font-medium">Project</th>
               <th className="px-4 py-2 font-medium">User</th>
               <th className="px-4 py-2 font-medium text-right">Hours</th>
+              <th className="px-4 py-2 font-medium">Billable</th>
               <th className="px-4 py-2 font-medium">Status</th>
               <th className="px-4 py-2 font-medium">Actions</th>
             </tr>
           </thead>
           <tbody>
             {entries.length === 0 ? (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-neutral-500">No time logged yet.</td></tr>
+              <tr><td colSpan={7} className="px-4 py-8 text-center text-neutral-500">No time logged yet.</td></tr>
             ) : entries.map((e) => (
               <tr key={e.id} className="border-t border-neutral-200 dark:border-neutral-800">
                 <td className="px-4 py-3">{formatDate(e.date)}</td>
                 <td className="px-4 py-3">{e.projectName}</td>
                 <td className="px-4 py-3">{e.userName}</td>
                 <td className="px-4 py-3 text-right">{(e.durationMinutes / 60).toFixed(2)}</td>
+                <td className="px-4 py-3">
+                  <Badge variant={e.billable ? "default" : "outline"}>
+                    {e.billable ? "Billable" : "Non-billable"}
+                  </Badge>
+                </td>
                 <td className="px-4 py-3"><Badge variant="outline">{e.status}</Badge></td>
                 <td className="px-4 py-3">{actions(e)}</td>
               </tr>

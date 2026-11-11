@@ -64,7 +64,6 @@ export async function inviteMember(
     include: { tenant: true },
   });
 
-  // Tenant host so the session cookie can be host-only on localhost.
   const acceptUrl = tenantUrl(invitation.tenant.slug, `/invite/${invitation.token}`);
   const { subject, html } = renderInviteEmail({
     workspaceName: invitation.tenant.name,

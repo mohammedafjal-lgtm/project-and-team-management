@@ -6,6 +6,9 @@ import { money } from "@/lib/money";
 import { formatDate } from "@/lib/date";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { getProject } from "@/domains/projects/project.repo";
+import { canManageProjectSettings } from "@/lib/auth/permissions";
+import { ProjectSettings } from "@/components/projects/project-settings";
 
 export default async function ProjectDetailPage({
   params,
@@ -15,13 +18,13 @@ export default async function ProjectDetailPage({
   const { projectId } = await params;
   const ctx = await getTenantContext();
 
-  const project = await prisma.project.findFirst({
-    where: { id: projectId, tenantId: ctx.tenantId },
-    include: { client: true },
-  });
+  const project = await getProject(ctx, projectId);
   if (!project) notFound();
 
-  const [minutesAgg, tasksTotal, tasksDone, invoiceTotal] = await Promise.all([
+  const projectRole = project.members.find((m) => m.userId === ctx.userId)?.role ?? null;
+  const canManage = canManageProjectSettings(ctx.role, projectRole);
+
+  const [minutesAgg, tasksTotal, tasksDone, invoiceTotal, memberships] = await Promise.all([
     prisma.timeEntry.aggregate({
       where: { tenantId: ctx.tenantId, projectId: project.id },
       _sum: { durationMinutes: true },
@@ -35,6 +38,13 @@ export default async function ProjectDetailPage({
       },
       _sum: { amountCents: true },
     }),
+    canManage
+      ? prisma.membership.findMany({
+          where: { tenantId: ctx.tenantId, status: "ACTIVE" },
+          include: { user: { select: { id: true, name: true, email: true } } },
+          orderBy: { createdAt: "asc" },
+        })
+      : Promise.resolve([]),
   ]);
 
   const minutes = minutesAgg._sum.durationMinutes ?? 0;
@@ -49,6 +59,10 @@ export default async function ProjectDetailPage({
           {project.code ? (
             <p className="text-sm text-neutral-500 mt-1 font-mono">{project.code}</p>
           ) : null}
+          <div className="mt-2 flex gap-2">
+            <Badge variant="outline">{project.visibility}</Badge>
+            <Badge variant="outline">{project.status}</Badge>
+          </div>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" asChild>
@@ -126,6 +140,41 @@ export default async function ProjectDetailPage({
           ) : null}
         </div>
       </section>
+
+      {canManage ? (
+        <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg p-4 bg-white dark:bg-neutral-950">
+          <ProjectSettings
+            projectId={project.id}
+            visibility={project.visibility}
+            members={project.members.map((m) => ({ userId: m.userId, role: m.role }))}
+            team={memberships.map((m) => ({
+              id: m.user.id,
+              name: m.user.name,
+              email: m.user.email,
+              role: m.role,
+            }))}
+          />
+        </div>
+      ) : (
+        <section className="space-y-2">
+          <h2 className="text-sm font-medium">Members</h2>
+          <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg divide-y divide-neutral-200 dark:divide-neutral-800 bg-white dark:bg-neutral-950">
+            {project.members.length === 0 ? (
+              <p className="px-4 py-3 text-sm text-neutral-500">No project members assigned.</p>
+            ) : (
+              project.members.map((m) => (
+                <div key={m.id} className="flex items-center justify-between px-4 py-3 text-sm">
+                  <div>
+                    <p className="font-medium">{m.user.name ?? m.user.email}</p>
+                    <p className="text-xs text-neutral-500">{m.user.email}</p>
+                  </div>
+                  <span className="text-xs text-neutral-500 uppercase tracking-wider">{m.role}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

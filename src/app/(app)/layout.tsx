@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { getTenantContext } from "@/lib/tenancy/resolve";
+import { canCreateWorkspace } from "@/lib/auth/permissions";
 import { Sidebar } from "@/components/app-shell/sidebar";
 import { Topbar } from "@/components/app-shell/topbar";
 import { prisma } from "@/lib/db/prisma";
@@ -34,6 +35,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         tenantSlug={tenant.slug}
         userEmail={session.email}
         tenants={memberships.map((m) => m.tenant)}
+        canCreateWorkspace={canCreateWorkspace(session.email)}
       />
       <div className="pl-60">
         <Topbar />

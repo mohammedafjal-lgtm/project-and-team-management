@@ -11,11 +11,18 @@ export default async function NewProjectPage({
 }) {
   const { clientId } = await searchParams;
   const ctx = await getTenantContext();
-  const clients = await prisma.client.findMany({
-    where: { tenantId: ctx.tenantId },
-    orderBy: { name: "asc" },
-    select: { id: true, name: true, currency: true },
-  });
+  const [clients, memberships] = await Promise.all([
+    prisma.client.findMany({
+      where: { tenantId: ctx.tenantId },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, currency: true },
+    }),
+    prisma.membership.findMany({
+      where: { tenantId: ctx.tenantId, status: "ACTIVE" },
+      include: { user: { select: { id: true, name: true, email: true } } },
+      orderBy: { createdAt: "asc" },
+    }),
+  ]);
 
   if (clients.length === 0) {
     return (
@@ -37,7 +44,17 @@ export default async function NewProjectPage({
           A project ties work to a client and a budget.
         </p>
       </div>
-      <NewProjectForm clients={clients} defaultClientId={clientId} />
+      <NewProjectForm
+        clients={clients}
+        defaultClientId={clientId}
+        currentUserId={ctx.userId}
+        team={memberships.map((m) => ({
+          id: m.user.id,
+          name: m.user.name,
+          email: m.user.email,
+          role: m.role,
+        }))}
+      />
     </div>
   );
 }

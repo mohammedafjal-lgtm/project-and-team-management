@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { headers } from "next/headers";
-import { requireTenantContext } from "@/lib/tenancy/context";
+import { requireApiTenantContext } from "@/lib/tenancy/resolve";
 import { updateTimeEntry, deleteTimeEntry } from "@/domains/time/time.repo";
 
 const PatchBody = z.object({
@@ -12,8 +11,7 @@ const PatchBody = z.object({
 });
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const h = await headers();
-  const ctx = await requireTenantContext(h.get("x-tenant-id"));
+  const ctx = await requireApiTenantContext();
   const { id } = await params;
   const parsed = PatchBody.safeParse(await req.json());
   if (!parsed.success) return NextResponse.json({ message: "Invalid input" }, { status: 400 });
@@ -31,8 +29,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 }
 
 export async function DELETE(_: Request, { params }: { params: Promise<{ id: string }> }) {
-  const h = await headers();
-  const ctx = await requireTenantContext(h.get("x-tenant-id"));
+  const ctx = await requireApiTenantContext();
   const { id } = await params;
   try {
     await deleteTimeEntry(ctx, id);

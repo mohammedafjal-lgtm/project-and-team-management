@@ -1,11 +1,17 @@
-export function tenantUrl(slug: string, path = "/dashboard"): string {
-    const root = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "localhost:3000";
-    const proto = process.env.NODE_ENV === "production" ? "https" : "http";
-    return `${proto}://${slug}.${root}${path}`;
-  }
-  
-  export function rootUrl(path = "/"): string {
-    const root = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "localhost:3000";
-    const proto = process.env.NODE_ENV === "production" ? "https" : "http";
-    return `${proto}://${root}${path}`;
-  }
+/** Same-origin app URL (absolute when NEXT_PUBLIC_APP_URL is set). */
+function appOrigin(): string {
+  const base = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
+  return base ?? "";
+}
+
+export function tenantUrl(_slug: string, path = "/dashboard"): string {
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+  const origin = appOrigin();
+  return origin ? `${origin}${normalized}` : normalized;
+}
+
+export function rootUrl(path = "/"): string {
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+  const origin = appOrigin();
+  return origin ? `${origin}${normalized}` : normalized;
+}

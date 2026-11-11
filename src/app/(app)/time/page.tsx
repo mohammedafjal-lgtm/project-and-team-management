@@ -1,18 +1,16 @@
 import { getTenantContext } from "@/lib/tenancy/resolve";
 import { listTimeEntries } from "@/domains/time/time.repo";
-import { prisma } from "@/lib/db/prisma";
+import { listProjects } from "@/domains/projects/project.repo";
 import { TimeList } from "@/components/time/time-list";
 import { hasRole } from "@/lib/auth/permissions";
 import { Role } from "@prisma/client";
 
 export default async function TimePage() {
   const ctx = await getTenantContext();
-  const entries = await listTimeEntries(ctx);
-  const projects = await prisma.project.findMany({
-    where: { tenantId: ctx.tenantId },
-    include: { client: true },
-    orderBy: { name: "asc" },
-  });
+  const [entries, projects] = await Promise.all([
+    listTimeEntries(ctx),
+    listProjects(ctx),
+  ]);
 
   return (
     <div className="space-y-6">

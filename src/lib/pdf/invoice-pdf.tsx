@@ -6,6 +6,18 @@ const styles = StyleSheet.create({
   header: { flexDirection: "row", justifyContent: "space-between", marginBottom: 32 },
   h1: { fontSize: 24, fontWeight: "bold" },
   muted: { color: "#666" },
+  badge: {
+    marginTop: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 3,
+    fontSize: 9,
+    fontWeight: "bold",
+    alignSelf: "flex-start",
+  },
+  badgePaid: { backgroundColor: "#dcfce7", color: "#166534" },
+  badgePartial: { backgroundColor: "#fef9c3", color: "#854d0e" },
+  badgeVoid: { backgroundColor: "#fee2e2", color: "#991b1b" },
   table: { marginTop: 24, borderTopWidth: 1, borderTopColor: "#e5e5e5" },
   row: { flexDirection: "row", paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: "#eee" },
   head: { flexDirection: "row", paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: "#111" },
@@ -22,12 +34,27 @@ function money(cents: number, currency: string) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(cents / 100);
 }
 
+function statusLabel(status: string) {
+  if (status === "PAID") return "PAID";
+  if (status === "PARTIALLY_PAID") return "PARTIALLY PAID";
+  if (status === "VOID") return "VOID";
+  return null;
+}
+
+function statusBadgeStyle(status: string) {
+  if (status === "PAID") return styles.badgePaid;
+  if (status === "PARTIALLY_PAID") return styles.badgePartial;
+  if (status === "VOID") return styles.badgeVoid;
+  return null;
+}
+
 export type InvoicePdfData = {
   tenantName: string;
   clientName: string;
   clientEmail: string | null;
   clientAddress: string | null;
   number: string;
+  status: string;
   issueDate: Date;
   dueDate: Date;
   currency: string;
@@ -35,9 +62,15 @@ export type InvoicePdfData = {
   subtotalCents: number;
   taxCents: number;
   totalCents: number;
+  amountPaidCents: number;
 };
 
 export function InvoicePdf({ data }: { data: InvoicePdfData }) {
+  const label = statusLabel(data.status);
+  const badgeStyle = statusBadgeStyle(data.status);
+  const outstanding = Math.max(0, data.totalCents - data.amountPaidCents);
+  const showPayments = data.amountPaidCents > 0;
+
   return (
     <Document>
       <Page size="A4" style={styles.page}>
@@ -45,6 +78,9 @@ export function InvoicePdf({ data }: { data: InvoicePdfData }) {
           <View>
             <Text style={styles.h1}>{data.tenantName}</Text>
             <Text style={styles.muted}>Invoice #{data.number}</Text>
+            {label && badgeStyle ? (
+              <Text style={[styles.badge, badgeStyle]}>{label}</Text>
+            ) : null}
           </View>
           <View style={{ alignItems: "flex-end" }}>
             <Text style={{ fontWeight: "bold" }}>Billed to</Text>
@@ -89,6 +125,25 @@ export function InvoicePdf({ data }: { data: InvoicePdfData }) {
             <Text>Total</Text>
             <Text>{money(data.totalCents, data.currency)}</Text>
           </View>
+          {showPayments ? (
+            <>
+              <View style={styles.totalRow}>
+                <Text>Paid</Text>
+                <Text>− {money(data.amountPaidCents, data.currency)}</Text>
+              </View>
+              {outstanding > 0 ? (
+                <View style={styles.totalRow}>
+                  <Text>Outstanding</Text>
+                  <Text>{money(outstanding, data.currency)}</Text>
+                </View>
+              ) : (
+                <View style={styles.totalRow}>
+                  <Text>Balance due</Text>
+                  <Text>{money(0, data.currency)}</Text>
+                </View>
+              )}
+            </>
+          ) : null}
         </View>
       </Page>
     </Document>

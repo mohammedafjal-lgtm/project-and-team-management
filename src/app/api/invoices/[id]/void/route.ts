@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { headers } from "next/headers";
-import { requireTenantContext } from "@/lib/tenancy/context";
+import { requireApiTenantContext } from "@/lib/tenancy/resolve";
 import { voidInvoice } from "@/domains/billing/invoice.service";
 import { hasRole } from "@/lib/auth/permissions";
 import { Role } from "@prisma/client";
@@ -9,8 +8,7 @@ import { Role } from "@prisma/client";
 const Body = z.object({ reason: z.string().max(500).optional() });
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const h = await headers();
-  const ctx = await requireTenantContext(h.get("x-tenant-id"));
+  const ctx = await requireApiTenantContext();
   if (!hasRole(ctx.role, Role.MANAGER)) {
     return NextResponse.json({ message: "Forbidden" }, { status: 403 });
   }

@@ -3,8 +3,18 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { RecordPaymentDialog } from "./record-payment-dialog";
+import { ZohoSyncDialog } from "./zoho-sync-dialog";
 
 export function InvoiceActions({
   id,
@@ -12,15 +22,24 @@ export function InvoiceActions({
   totalCents,
   amountPaidCents,
   currency,
+  zohoInvoiceId,
+  zohoInvoiceNumber,
+  zohoConnected,
+  canManageBilling,
 }: {
   id: string;
   status: string;
   totalCents: number;
   amountPaidCents: number;
   currency: string;
+  zohoInvoiceId: string | null;
+  zohoInvoiceNumber: string | null;
+  zohoConnected: boolean;
+  canManageBilling: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState<"send" | "void" | null>(null);
+  const [voidOpen, setVoidOpen] = useState(false);
   const outstanding = totalCents - amountPaidCents;
 
   async function send() {
@@ -39,7 +58,6 @@ export function InvoiceActions({
   }
 
   async function voidInvoice() {
-    if (!confirm("Void this invoice? The journal entry will be reversed.")) return;
     setBusy("void");
     try {
       const res = await fetch(`/api/invoices/${id}/void`, {
@@ -50,6 +68,7 @@ export function InvoiceActions({
       const data = await res.json();
       if (!res.ok) throw new Error(data.message ?? "Failed to void");
       toast.success("Invoice voided");
+      setVoidOpen(false);
       router.refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed");
@@ -79,10 +98,49 @@ export function InvoiceActions({
           currency={currency}
         />
       ) : null}
+      {status !== "VOID" ? (
+        <ZohoSyncDialog
+          invoiceId={id}
+          zohoInvoiceId={zohoInvoiceId}
+          zohoInvoiceNumber={zohoInvoiceNumber}
+          connected={zohoConnected}
+          canManage={canManageBilling}
+        />
+      ) : null}
       {canVoid ? (
-        <Button variant="outline" onClick={voidInvoice} disabled={busy === "void"}>
-          {busy === "void" ? "Voiding…" : "Void"}
-        </Button>
+        <Dialog open={voidOpen} onOpenChange={setVoidOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" disabled={busy === "void"}>
+              Void
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Void invoice?</DialogTitle>
+              <DialogDescription>
+                This cannot be undone. The journal entry will be reversed and the invoice will be marked void.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setVoidOpen(false)}
+                disabled={busy === "void"}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={voidInvoice}
+                disabled={busy === "void"}
+              >
+                {busy === "void" ? "Voiding…" : "Void invoice"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       ) : null}
     </div>
   );

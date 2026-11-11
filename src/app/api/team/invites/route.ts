@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { headers } from "next/headers";
-import { requireTenantContext } from "@/lib/tenancy/context";
+import { requireApiTenantContext } from "@/lib/tenancy/resolve";
 import { canManageTeam, isAssignableRole } from "@/lib/auth/permissions";
 import { inviteMember } from "@/domains/team/team.service";
 import { Role } from "@prisma/client";
@@ -14,8 +13,7 @@ const Body = z.object({
 });
 
 export async function POST(req: Request) {
-  const h = await headers();
-  const ctx = await requireTenantContext(h.get("x-tenant-id"));
+  const ctx = await requireApiTenantContext();
   if (!canManageTeam(ctx.role)) {
     return NextResponse.json({ message: "Forbidden" }, { status: 403 });
   }

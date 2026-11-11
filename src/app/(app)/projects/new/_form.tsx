@@ -2,19 +2,29 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { ProjectRole, ProjectVisibility } from "@prisma/client";
 import { api } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  ProjectMembersPicker,
+  type ProjectMemberSelection,
+  type TeamMemberOption,
+} from "@/components/projects/project-members-picker";
 import { toast } from "sonner";
 
 type Client = { id: string; name: string; currency: string };
 
 export function NewProjectForm({
   clients,
+  team,
+  currentUserId,
   defaultClientId,
 }: {
   clients: Client[];
+  team: TeamMemberOption[];
+  currentUserId: string;
   defaultClientId?: string;
 }) {
   const router = useRouter();
@@ -23,10 +33,14 @@ export function NewProjectForm({
     name: "",
     clientId: defaultClientId ?? clients[0]?.id ?? "",
     code: "",
+    visibility: ProjectVisibility.PUBLIC as ProjectVisibility,
     budgetType: "NONE" as "NONE" | "HOURS" | "AMOUNT",
     budgetHours: "",
     budgetDollars: "",
   });
+  const [members, setMembers] = useState<ProjectMemberSelection[]>([
+    { userId: currentUserId, role: ProjectRole.ADMIN },
+  ]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -36,6 +50,7 @@ export function NewProjectForm({
         name: form.name.trim(),
         clientId: form.clientId,
         code: form.code.trim() || undefined,
+        visibility: form.visibility,
         budgetType: form.budgetType,
         budgetMinutes:
           form.budgetType === "HOURS"
@@ -45,6 +60,7 @@ export function NewProjectForm({
           form.budgetType === "AMOUNT"
             ? Math.round((parseFloat(form.budgetDollars) || 0) * 100)
             : undefined,
+        members,
       });
       toast.success("Project created");
       router.push(`/projects/${res.data.id}/board`);
@@ -90,6 +106,27 @@ export function NewProjectForm({
           value={form.code}
           onChange={(e) => setForm({ ...form, code: e.target.value })}
         />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="visibility">Visibility</Label>
+        <select
+          id="visibility"
+          value={form.visibility}
+          onChange={(e) => setForm({ ...form, visibility: e.target.value as ProjectVisibility })}
+          className="w-full h-9 rounded-md border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 px-2 text-sm"
+        >
+          <option value={ProjectVisibility.PUBLIC}>Public — all workspace members</option>
+          <option value={ProjectVisibility.PRIVATE}>Private — assigned members only</option>
+        </select>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label>Project members</Label>
+        <p className="text-xs text-neutral-500 mb-2">
+          Assign people and set their project role (Admin can change settings).
+        </p>
+        <ProjectMembersPicker team={team} value={members} onChange={setMembers} />
       </div>
 
       <div className="space-y-1.5">

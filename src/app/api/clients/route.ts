@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { headers } from "next/headers";
-import { requireTenantContext } from "@/lib/tenancy/context";
+import { requireApiTenantContext } from "@/lib/tenancy/resolve";
 import { prisma } from "@/lib/db/prisma";
 import { hasRole } from "@/lib/auth/permissions";
 import { Role } from "@prisma/client";
@@ -16,8 +15,7 @@ const Body = z.object({
 });
 
 export async function GET() {
-  const h = await headers();
-  const ctx = await requireTenantContext(h.get("x-tenant-id"));
+  const ctx = await requireApiTenantContext();
   const clients = await prisma.client.findMany({
     where: { tenantId: ctx.tenantId },
     orderBy: { name: "asc" },
@@ -26,8 +24,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const h = await headers();
-  const ctx = await requireTenantContext(h.get("x-tenant-id"));
+  const ctx = await requireApiTenantContext();
   if (!hasRole(ctx.role, Role.MANAGER)) {
     return NextResponse.json({ message: "Forbidden" }, { status: 403 });
   }

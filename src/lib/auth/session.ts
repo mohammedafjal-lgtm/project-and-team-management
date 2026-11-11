@@ -11,30 +11,11 @@ export type SessionPayload = {
   activeTenantId?: string;
 };
 
-/**
- * Cookie Domain for sharing the session across tenant subdomains.
- *
- * Browsers reject `Domain=localhost` / `Domain=.localhost`, so in local
- * development we omit Domain and rely on host-only cookies. That means
- * login / invite-accept must happen on the tenant host
- * (e.g. demo.localhost:3000), which is already how redirects work.
- */
-function cookieDomain(): string | undefined {
-  const root =
-    process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? process.env.ROOT_DOMAIN ?? "";
-  const host = root.split(":")[0];
-  if (!host) return undefined;
-  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) return undefined;
-  if (host === "localhost" || host.endsWith(".localhost")) return undefined;
-  return `.${host}`;
-}
-
 function sessionCookieBase() {
   return {
     httpOnly: true as const,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax" as const,
-    domain: cookieDomain(),
     path: "/",
   };
 }

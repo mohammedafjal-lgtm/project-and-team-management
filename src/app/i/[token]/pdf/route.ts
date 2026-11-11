@@ -31,6 +31,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ token: str
         clientEmail: invoice.client.email,
         clientAddress: invoice.client.billingAddress,
         number: invoice.number,
+        status: invoice.status,
         issueDate: invoice.issueDate,
         dueDate: invoice.dueDate,
         currency: invoice.currency,
@@ -43,6 +44,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ token: str
         subtotalCents: invoice.subtotalCents,
         taxCents: invoice.taxCents,
         totalCents: invoice.totalCents,
+        amountPaidCents: invoice.amountPaidCents,
       },
     })
   );

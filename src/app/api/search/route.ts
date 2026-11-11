@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
-import { requireTenantContext } from "@/lib/tenancy/context";
-import { headers } from "next/headers";
+import { requireApiTenantContext } from "@/lib/tenancy/resolve";
+import { visibleProjectWhere } from "@/domains/projects/project-access";
 
 export async function GET(req: Request) {
-  const h = await headers();
-  const ctx = await requireTenantContext(h.get("x-tenant-id"));
+  const ctx = await requireApiTenantContext();
   const q = new URL(req.url).searchParams.get("q")?.trim() ?? "";
   if (q.length < 2) return NextResponse.json({ projects: [], invoices: [], clients: [] });
 
@@ -13,7 +12,7 @@ export async function GET(req: Request) {
 
   const [projects, invoices, clients] = await Promise.all([
     prisma.project.findMany({
-      where: { tenantId: ctx.tenantId, name: contains },
+      where: { ...visibleProjectWhere(ctx), name: contains },
       select: { id: true, name: true },
       take: 5,
     }),
