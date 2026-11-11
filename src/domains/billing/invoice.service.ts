@@ -105,6 +105,79 @@ export async function createInvoice(ctx: TenantContext, input: CreateInvoiceInpu
   );
 }
 
+export type UpdateInvoiceInput = {
+  clientId: string;
+  issueDate: Date;
+  dueDate: Date;
+  lineItems: { description: string; quantity: number; unitPriceCents: number; amountCents?: number }[];
+  taxRateBps: number;
+};
+
+/**
+ * Updates a DRAFT invoice: replaces line items and recomputes totals.
+ * Client change is blocked when time entries are already locked to the invoice.
+ */
+export async function updateInvoice(ctx: TenantContext, invoiceId: string, input: UpdateInvoiceInput) {
+  const computedLines = input.lineItems.map((l) => ({
+    description: l.description,
+    quantity: l.quantity,
+    unitPriceCents: l.unitPriceCents,
+    amountCents: l.amountCents ?? l.unitPriceCents * l.quantity,
+  }));
+
+  const subtotalCents = computedLines.reduce((s, l) => s + l.amountCents, 0);
+  const taxAlloc = allocateTax(computedLines.map((l) => ({ amountCents: l.amountCents })), input.taxRateBps);
+  const taxCents = taxAlloc.totalTaxCents;
+  const totalCents = subtotalCents + taxCents;
+
+  return prisma.$transaction(async (tx) => {
+    const invoice = await tx.invoice.findFirst({
+      where: { id: invoiceId, tenantId: ctx.tenantId },
+      include: { timeEntries: { select: { id: true }, take: 1 } },
+    });
+    if (!invoice) throw new Error("Invoice not found");
+    if (invoice.status !== "DRAFT") throw new Error("Only draft invoices can be edited");
+
+    if (input.clientId !== invoice.clientId && invoice.timeEntries.length > 0) {
+      throw new Error("Cannot change client on an invoice linked to time entries");
+    }
+
+    const client = await tx.client.findFirst({
+      where: { id: input.clientId, tenantId: ctx.tenantId },
+      select: { id: true, currency: true },
+    });
+    if (!client) throw new Error("Client not found");
+
+    await tx.invoiceLineItem.deleteMany({
+      where: { invoiceId: invoice.id, tenantId: ctx.tenantId },
+    });
+
+    return tx.invoice.update({
+      where: { id: invoice.id },
+      data: {
+        clientId: client.id,
+        currency: client.currency,
+        issueDate: input.issueDate,
+        dueDate: input.dueDate,
+        subtotalCents,
+        taxCents,
+        totalCents,
+        lineItems: {
+          create: computedLines.map((l, i) => ({
+            tenantId: ctx.tenantId,
+            description: l.description,
+            quantity: l.quantity,
+            unitPriceCents: l.unitPriceCents,
+            amountCents: l.amountCents,
+            sortOrder: i,
+          })),
+        },
+      },
+      include: { lineItems: { orderBy: { sortOrder: "asc" } }, client: true },
+    });
+  });
+}
+
 /**
  * Issues a DRAFT invoice:
  *  1. In a transaction: set status=SENT, sentAt, generate publicToken, post revenue journal.

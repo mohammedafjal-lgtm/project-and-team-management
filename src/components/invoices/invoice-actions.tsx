@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -87,9 +88,14 @@ export function InvoiceActions({
         <a href={`/api/invoices/${id}/pdf`} target="_blank" rel="noopener noreferrer">PDF</a>
       </Button>
       {isDraft ? (
-        <Button onClick={send} disabled={busy === "send"}>
-          {busy === "send" ? "Sending…" : "Send invoice"}
-        </Button>
+        <>
+          <Button variant="outline" asChild>
+            <Link href={`/invoices/${id}/edit`}>Edit</Link>
+          </Button>
+          <Button onClick={send} disabled={busy === "send"}>
+            {busy === "send" ? "Sending…" : "Send invoice"}
+          </Button>
+        </>
       ) : null}
       {canPay ? (
         <RecordPaymentDialog
