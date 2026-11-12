@@ -26,9 +26,9 @@ export default async function NewProjectPage({
 
   if (clients.length === 0) {
     return (
-      <div className="max-w-xl border border-dashed border-neutral-200 dark:border-neutral-800 rounded-lg p-12 text-center">
+      <div className="max-w-xl border border-dashed border-border rounded-lg p-12 text-center">
         <p className="font-medium">Create a client first</p>
-        <p className="text-sm text-neutral-500 mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           Projects belong to a client. Add one to get started.
         </p>
         <Button asChild className="mt-4"><Link href="/clients/new">New client</Link></Button>
@@ -40,7 +40,7 @@ export default async function NewProjectPage({
     <div className="max-w-xl space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">New project</h1>
-        <p className="text-sm text-neutral-500 mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           A project ties work to a client and a budget.
         </p>
       </div>

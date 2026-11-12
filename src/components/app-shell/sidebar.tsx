@@ -90,58 +90,64 @@ export function Sidebar(props: {
 
   function nav(items: NavItem[], heading: string) {
     return (
-      <div className="mb-4">
-        <p className="px-3 mb-1 text-[11px] font-medium uppercase tracking-wider text-neutral-400">
+      <div className="mb-6">
+        <p className="px-3 mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
           {heading}
         </p>
-        {items.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || pathname.startsWith(`${href}/`);
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                "flex items-center gap-2 px-3 h-8 rounded-md text-sm transition-colors",
-                active
-                  ? "bg-neutral-100 dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 font-medium"
-                  : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 hover:bg-neutral-100 dark:hover:bg-neutral-900"
-              )}
-            >
-              <Icon className="w-4 h-4" />
-              {label}
-            </Link>
-          );
-        })}
+        <div className="space-y-1">
+          {items.map(({ href, label, icon: Icon }) => {
+            const active = pathname === href || pathname.startsWith(`${href}/`);
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={cn(
+                  "flex items-center gap-3 px-3 h-10 rounded-xl text-sm font-medium transition-all",
+                  active
+                    ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm ring-1 ring-primary/15"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                )}
+              >
+                <Icon className="w-4 h-4" />
+                {label}
+              </Link>
+            );
+          })}
+        </div>
       </div>
     );
   }
 
   return (
     <>
-      <aside className="fixed left-0 top-0 h-screen w-60 border-r border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 flex flex-col">
-        <div className="p-3">
+      <aside className="fixed left-0 top-0 h-screen w-[260px] border-r border-border bg-sidebar flex flex-col">
+        <div className="p-4">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="w-full flex items-center gap-2 px-2 h-9 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 text-left">
-                <div className="w-6 h-6 rounded bg-neutral-900 dark:bg-neutral-100 text-neutral-50 dark:text-neutral-900 grid place-items-center text-xs font-semibold">
+              <button className="w-full flex items-center gap-3 px-2 h-12 rounded-xl hover:bg-secondary text-left transition-colors">
+                <div className="w-8 h-8 rounded-lg bg-primary text-primary-foreground grid place-items-center text-sm font-bold shadow-sm">
                   {props.tenantName.slice(0, 1).toUpperCase()}
                 </div>
-                <span className="flex-1 text-sm font-medium truncate">{props.tenantName}</span>
-                <ChevronsUpDown className="w-3.5 h-3.5 text-neutral-400" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold truncate leading-tight">{props.tenantName}</p>
+                  <p className="text-xs text-muted-foreground truncate">{props.tenantSlug}</p>
+                </div>
+                <ChevronsUpDown className="w-4 h-4 text-muted-foreground shrink-0" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56">
-              <DropdownMenuLabel className="text-xs text-neutral-500">Workspaces</DropdownMenuLabel>
+            <DropdownMenuContent align="start" className="w-[240px]">
+              <DropdownMenuLabel className="text-xs text-muted-foreground">Workspaces</DropdownMenuLabel>
               {props.tenants.map((t) => (
                 <DropdownMenuItem
                   key={t.slug}
                   onSelect={() => {
                     void switchWorkspace(t.slug);
                   }}
+                  className="cursor-pointer"
                 >
                   <span className="flex-1 truncate">{t.name}</span>
                   {t.slug === props.tenantSlug ? (
-                    <Check className="w-3.5 h-3.5 text-neutral-900 dark:text-neutral-100" />
+                    <Check className="w-3.5 h-3.5 text-primary" />
                   ) : null}
                 </DropdownMenuItem>
               ))}
@@ -152,15 +158,16 @@ export function Sidebar(props: {
                     e.preventDefault();
                     setCreateOpen(true);
                   }}
+                  className="cursor-pointer"
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Create workspace
                 </DropdownMenuItem>
               ) : null}
-              <DropdownMenuItem asChild>
+              <DropdownMenuItem asChild className="cursor-pointer">
                 <a href="/settings">Settings</a>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
+              <DropdownMenuItem asChild className="cursor-pointer text-destructive focus:text-destructive">
                 <a href="/logout">
                   <LogOut className="w-4 h-4 mr-2" />
                   Sign out
@@ -170,20 +177,22 @@ export function Sidebar(props: {
           </DropdownMenu>
         </div>
 
-        <div className="px-3 pb-3 flex-1 overflow-auto">
+        <div className="px-4 pb-4 flex-1 overflow-auto">
           {nav(PRIMARY, "Work")}
           {nav(FINANCE, "Finance")}
         </div>
 
-        <div className="p-3 border-t border-neutral-200 dark:border-neutral-800">
+        <div className="p-4 border-t border-border mt-auto">
           <Link
             href="/settings"
-            className="flex items-center gap-2 px-3 h-8 rounded-md text-sm text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 hover:bg-neutral-100 dark:hover:bg-neutral-900"
+            className="flex items-center gap-3 px-3 h-10 rounded-xl text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-all"
           >
             <Settings className="w-4 h-4" />
             Settings
           </Link>
-          <p className="px-3 mt-2 text-xs text-neutral-500 truncate">{props.userEmail}</p>
+          <div className="px-3 mt-4">
+            <p className="text-xs text-muted-foreground truncate">{props.userEmail}</p>
+          </div>
         </div>
       </aside>
 

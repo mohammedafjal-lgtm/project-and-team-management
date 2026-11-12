@@ -114,13 +114,13 @@ export function ZohoSyncDialog({
           <DialogTitle>Sync with Zoho Books</DialogTitle>
         </DialogHeader>
         {!connected ? (
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-muted-foreground">
             Connect Zoho Books in Settings before syncing invoices.
           </p>
         ) : (
           <div className="space-y-4">
             {zohoInvoiceId ? (
-              <p className="text-xs text-neutral-500">
+              <p className="text-xs text-muted-foreground">
                 Currently linked to Zoho invoice {zohoInvoiceNumber ?? zohoInvoiceId}.
               </p>
             ) : null}
@@ -148,10 +148,10 @@ export function ZohoSyncDialog({
               <div className="space-y-1.5">
                 <Label>Zoho invoice</Label>
                 {loadingList ? (
-                  <p className="text-xs text-neutral-500">Loading invoices…</p>
+                  <p className="text-xs text-muted-foreground">Loading invoices…</p>
                 ) : (
                   <select
-                    className="w-full h-9 rounded-md border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 px-2 text-sm"
+                    className="w-full h-9 rounded-md border border-border bg-card px-2 text-sm"
                     value={zohoId}
                     onChange={(e) => setZohoId(e.target.value)}
                   >
@@ -164,7 +164,7 @@ export function ZohoSyncDialog({
                   </select>
                 )}
                 <input
-                  className="w-full h-9 rounded-md border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 px-2 text-sm"
+                  className="w-full h-9 rounded-md border border-border bg-card px-2 text-sm"
                   placeholder="Or paste Zoho invoice ID"
                   value={zohoId}
                   onChange={(e) => setZohoId(e.target.value)}

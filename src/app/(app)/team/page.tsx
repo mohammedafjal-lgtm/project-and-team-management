@@ -25,7 +25,7 @@ export default async function TeamPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Team</h1>
-        <p className="text-sm text-neutral-500 mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           {memberships.length} members
           {canManage && invitations.length > 0
             ? ` · ${invitations.length} pending invite${invitations.length === 1 ? "" : "s"}`

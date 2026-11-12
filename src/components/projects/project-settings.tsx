@@ -49,7 +49,7 @@ export function ProjectSettings({
     <section className="space-y-4">
       <div>
         <h2 className="text-sm font-medium">Project access</h2>
-        <p className="text-xs text-neutral-500 mt-1">
+        <p className="text-xs text-muted-foreground mt-1">
           Control visibility and who can change this project&apos;s settings.
         </p>
       </div>
@@ -60,7 +60,7 @@ export function ProjectSettings({
           id="project-visibility"
           value={vis}
           onChange={(e) => setVis(e.target.value as ProjectVisibility)}
-          className="w-full h-9 rounded-md border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 px-2 text-sm"
+          className="w-full h-9 rounded-md border border-border bg-card px-2 text-sm"
         >
           <option value={ProjectVisibility.PUBLIC}>Public — all workspace members</option>
           <option value={ProjectVisibility.PRIVATE}>Private — assigned members only</option>

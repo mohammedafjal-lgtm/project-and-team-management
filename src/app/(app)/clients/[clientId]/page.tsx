@@ -5,9 +5,9 @@ import { getTenantContext } from "@/lib/tenancy/resolve";
 import { prisma } from "@/lib/db/prisma";
 import { money } from "@/lib/money";
 import { hasRole } from "@/lib/auth/permissions";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/date";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 export default async function ClientDetailPage({ params }: { params: Promise<{ clientId: string }> }) {
   const { clientId } = await params;
@@ -28,13 +28,13 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ c
     <div className="space-y-8 max-w-4xl">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-xs text-neutral-500 uppercase tracking-wider">Client</p>
-          <h1 className="text-2xl font-semibold tracking-tight">{client.name}</h1>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Client</p>
+          <h1 className="text-2xl font-bold tracking-tight mt-1">{client.name}</h1>
           {client.email ? (
-            <p className="text-sm text-neutral-500 mt-1">{client.email}</p>
+            <p className="text-sm text-muted-foreground mt-1">{client.email}</p>
           ) : null}
           {client.billingAddress ? (
-            <p className="text-sm text-neutral-500 mt-1 whitespace-pre-line">{client.billingAddress}</p>
+            <p className="text-sm text-muted-foreground mt-1 whitespace-pre-line">{client.billingAddress}</p>
           ) : null}
         </div>
         <div className="flex gap-2">
@@ -50,48 +50,48 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ c
       </div>
 
       <div className="grid grid-cols-3 gap-4 text-sm">
-        <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg p-4">
-          <p className="text-xs text-neutral-500 uppercase tracking-wider">Default rate</p>
-          <p className="mt-2 text-lg font-semibold tabular-nums">
+        <div className="rounded-2xl border border-border bg-card shadow-sm p-6">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Default rate</p>
+          <p className="mt-2 text-2xl font-bold tabular-nums">
             {client.defaultRateCents ? `${money(client.defaultRateCents, client.currency)}/hr` : "—"}
           </p>
         </div>
-        <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg p-4">
-          <p className="text-xs text-neutral-500 uppercase tracking-wider">Tax rate</p>
-          <p className="mt-2 text-lg font-semibold tabular-nums">
+        <div className="rounded-2xl border border-border bg-card shadow-sm p-6">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Tax rate</p>
+          <p className="mt-2 text-2xl font-bold tabular-nums">
             {(client.taxRateBps / 100).toFixed(2)}%
           </p>
         </div>
-        <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg p-4">
-          <p className="text-xs text-neutral-500 uppercase tracking-wider">Currency</p>
-          <p className="mt-2 text-lg font-semibold">{client.currency}</p>
+        <div className="rounded-2xl border border-border bg-card shadow-sm p-6">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Currency</p>
+          <p className="mt-2 text-2xl font-bold">{client.currency}</p>
         </div>
       </div>
 
       <section className="space-y-3">
-        <h2 className="text-sm font-medium">Projects</h2>
-        <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg overflow-hidden bg-white dark:bg-neutral-950">
+        <h2 className="text-sm font-semibold tracking-tight">Projects</h2>
+        <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
           {client.projects.length === 0 ? (
-            <p className="px-4 py-6 text-sm text-neutral-500 text-center">No projects yet.</p>
+            <p className="px-6 py-8 text-sm text-muted-foreground text-center">No projects yet.</p>
           ) : (
             <table className="w-full text-sm">
-              <thead className="bg-neutral-50 dark:bg-neutral-900 text-left text-xs text-neutral-500 uppercase tracking-wider">
+              <thead className="bg-muted/50 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 <tr>
-                  <th className="px-4 py-2 font-medium">Name</th>
-                  <th className="px-4 py-2 font-medium">Status</th>
-                  <th className="px-4 py-2 font-medium">Created</th>
+                  <th className="px-6 py-4">Name</th>
+                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4">Created</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-border">
                 {client.projects.map((p) => (
-                  <tr key={p.id} className="border-t border-neutral-200 dark:border-neutral-800">
-                    <td className="px-4 py-3">
+                  <tr key={p.id} className="hover:bg-muted/30 transition-colors">
+                    <td className="px-6 py-4">
                       <Link href={`/projects/${p.id}/board`} className="font-medium hover:underline">
                         {p.name}
                       </Link>
                     </td>
-                    <td className="px-4 py-3"><Badge variant="outline">{p.status}</Badge></td>
-                    <td className="px-4 py-3 text-neutral-500">{formatDate(p.createdAt)}</td>
+                    <td className="px-6 py-4"><StatusBadge status={p.status} /></td>
+                    <td className="px-6 py-4 text-muted-foreground">{formatDate(p.createdAt)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -101,29 +101,29 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ c
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-sm font-medium">Invoices</h2>
-        <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg overflow-hidden bg-white dark:bg-neutral-950">
+        <h2 className="text-sm font-semibold tracking-tight">Invoices</h2>
+        <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
           {client.invoices.length === 0 ? (
-            <p className="px-4 py-6 text-sm text-neutral-500 text-center">No invoices yet.</p>
+            <p className="px-6 py-8 text-sm text-muted-foreground text-center">No invoices yet.</p>
           ) : (
             <table className="w-full text-sm">
-              <thead className="bg-neutral-50 dark:bg-neutral-900 text-left text-xs text-neutral-500 uppercase tracking-wider">
+              <thead className="bg-muted/50 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 <tr>
-                  <th className="px-4 py-2 font-medium">Number</th>
-                  <th className="px-4 py-2 font-medium">Status</th>
-                  <th className="px-4 py-2 font-medium text-right">Total</th>
+                  <th className="px-6 py-4">Number</th>
+                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4 text-right">Total</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-border">
                 {client.invoices.map((i) => (
-                  <tr key={i.id} className="border-t border-neutral-200 dark:border-neutral-800">
-                    <td className="px-4 py-3">
+                  <tr key={i.id} className="hover:bg-muted/30 transition-colors">
+                    <td className="px-6 py-4">
                       <Link href={`/invoices/${i.id}`} className="font-medium hover:underline">
                         #{i.number}
                       </Link>
                     </td>
-                    <td className="px-4 py-3"><Badge variant="outline">{i.status}</Badge></td>
-                    <td className="px-4 py-3 text-right tabular-nums">
+                    <td className="px-6 py-4"><StatusBadge status={i.status} /></td>
+                    <td className="px-6 py-4 text-right tabular-nums">
                       {money(i.totalCents, i.currency)}
                     </td>
                   </tr>

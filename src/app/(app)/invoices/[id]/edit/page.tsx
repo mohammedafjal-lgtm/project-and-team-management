@@ -39,9 +39,9 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
   return (
     <div className="max-w-3xl space-y-6">
       <div>
-        <p className="text-xs text-neutral-500 uppercase tracking-wider">Invoice</p>
+        <p className="text-xs text-muted-foreground uppercase tracking-wider">Invoice</p>
         <h1 className="text-2xl font-semibold tracking-tight">Edit #{invoice.number}</h1>
-        <p className="text-sm text-neutral-500 mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           Update draft details, line items, and tax before sending.
         </p>
       </div>
@@ -65,7 +65,7 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
         />
       ) : (
         <div className="space-y-3">
-          <p className="text-sm text-neutral-500">Only managers can edit invoices.</p>
+          <p className="text-sm text-muted-foreground">Only managers can edit invoices.</p>
           <Button variant="outline" asChild>
             <Link href={`/invoices/${invoice.id}`}>Back to invoice</Link>
           </Button>

@@ -105,7 +105,7 @@ export function FromTimeForm({ clients, entries }: { clients: Client[]; entries:
             required
             value={clientId}
             onChange={(e) => changeClient(e.target.value)}
-            className="w-full h-9 rounded-md border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 px-2 text-sm"
+            className="w-full h-9 rounded-md border border-border bg-card px-2 text-sm"
           >
             {clients.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
@@ -122,9 +122,9 @@ export function FromTimeForm({ clients, entries }: { clients: Client[]; entries:
         </div>
       </div>
 
-      <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg overflow-hidden bg-white dark:bg-neutral-950">
+      <div className="border border-border rounded-lg overflow-hidden bg-card">
         <table className="w-full text-sm">
-          <thead className="bg-neutral-50 dark:bg-neutral-900 text-left text-xs text-neutral-500 uppercase tracking-wider">
+          <thead className="bg-muted/50 text-left text-xs text-muted-foreground uppercase tracking-wider">
             <tr>
               <th className="px-3 py-2 w-8"></th>
               <th className="px-3 py-2 font-medium">Date</th>
@@ -136,7 +136,7 @@ export function FromTimeForm({ clients, entries }: { clients: Client[]; entries:
           </thead>
           <tbody>
             {visibleEntries.map((e) => (
-              <tr key={e.id} className="border-t border-neutral-200 dark:border-neutral-800">
+              <tr key={e.id} className="border-t border-border">
                 <td className="px-3 py-2">
                   <input
                     type="checkbox"
@@ -146,7 +146,7 @@ export function FromTimeForm({ clients, entries }: { clients: Client[]; entries:
                 </td>
                 <td className="px-3 py-2">{new Date(e.date).toISOString().slice(0, 10)}</td>
                 <td className="px-3 py-2">{e.projectName}</td>
-                <td className="px-3 py-2 text-neutral-600 dark:text-neutral-400">{e.userName}</td>
+                <td className="px-3 py-2 text-muted-foreground">{e.userName}</td>
                 <td className="px-3 py-2 text-right tabular-nums">{(e.durationMinutes / 60).toFixed(2)}</td>
                 <td className="px-3 py-2 text-right tabular-nums">
                   {fmt(Math.round((e.durationMinutes * e.rateCents) / 60))}
@@ -168,24 +168,24 @@ export function FromTimeForm({ clients, entries }: { clients: Client[]; entries:
             value={taxRateStr}
             onChange={(e) => setTaxRateStr(e.target.value)}
           />
-          <p className="text-xs text-neutral-500">
+          <p className="text-xs text-muted-foreground">
             Prefilled from the client&apos;s default tax rate.
           </p>
         </div>
         <div className="text-sm space-y-1 w-64">
           <div className="flex justify-between">
-            <span className="text-neutral-500">Subtotal</span>
+            <span className="text-muted-foreground">Subtotal</span>
             <span className="tabular-nums">{fmt(totals.subtotalCents)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-neutral-500">Tax</span>
+            <span className="text-muted-foreground">Tax</span>
             <span className="tabular-nums">{fmt(totals.taxCents)}</span>
           </div>
-          <div className="flex justify-between font-semibold border-t border-neutral-200 dark:border-neutral-800 pt-2 mt-1">
+          <div className="flex justify-between font-semibold border-t border-border pt-2 mt-1">
             <span>Total</span>
             <span className="tabular-nums">{fmt(totals.totalCents)}</span>
           </div>
-          <p className="text-xs text-neutral-500 pt-1">{totals.count} entries selected</p>
+          <p className="text-xs text-muted-foreground pt-1">{totals.count} entries selected</p>
         </div>
       </div>
 

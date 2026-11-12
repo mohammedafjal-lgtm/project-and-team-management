@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ProjectRole, ProjectVisibility } from "@prisma/client";
+import { z } from "zod";
 import { api } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,8 +14,53 @@ import {
   type TeamMemberOption,
 } from "@/components/projects/project-members-picker";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { FormError, type FormErrors } from "@/components/ui/form-error";
 
 type Client = { id: string; name: string; currency: string };
+
+const projectSchema = z
+  .object({
+    name: z.string().min(1, "Name is required").max(100, "Name is too long"),
+    clientId: z.string().min(1, "Client is required"),
+    code: z.string().max(50, "Code is too long").optional(),
+    visibility: z.nativeEnum(ProjectVisibility),
+    budgetType: z.enum(["NONE", "HOURS", "AMOUNT"]),
+    budgetHours: z.string().optional(),
+    budgetDollars: z.string().optional(),
+    members: z
+      .array(
+        z.object({
+          userId: z.string(),
+          role: z.nativeEnum(ProjectRole),
+        })
+      )
+      .min(1, "At least one member is required"),
+  })
+  .refine(
+    (data) => {
+      if (data.budgetType !== "HOURS") return true;
+      return (
+        data.budgetHours !== undefined &&
+        data.budgetHours !== "" &&
+        !isNaN(Number(data.budgetHours)) &&
+        Number(data.budgetHours) >= 0
+      );
+    },
+    { message: "Please enter valid hours", path: ["budgetHours"] }
+  )
+  .refine(
+    (data) => {
+      if (data.budgetType !== "AMOUNT") return true;
+      return (
+        data.budgetDollars !== undefined &&
+        data.budgetDollars !== "" &&
+        !isNaN(Number(data.budgetDollars)) &&
+        Number(data.budgetDollars) >= 0
+      );
+    },
+    { message: "Please enter a valid amount", path: ["budgetDollars"] }
+  );
 
 export function NewProjectForm({
   clients,
@@ -41,9 +87,18 @@ export function NewProjectForm({
   const [members, setMembers] = useState<ProjectMemberSelection[]>([
     { userId: currentUserId, role: ProjectRole.ADMIN },
   ]);
+  const [errors, setErrors] = useState<FormErrors>({});
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setErrors({});
+
+    const result = projectSchema.safeParse({ ...form, members });
+    if (!result.success) {
+      setErrors(result.error.flatten().fieldErrors);
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await api.post<{ id: string }>("/projects", {
@@ -71,31 +126,37 @@ export function NewProjectForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <form onSubmit={onSubmit} className="space-y-6">
       <div className="space-y-1.5">
         <Label htmlFor="name">Name</Label>
         <Input
           id="name"
           autoFocus
-          required
           value={form.name}
           onChange={(e) => setForm({ ...form, name: e.target.value })}
+          className={cn(errors.name && "border-destructive focus-visible:ring-destructive/30")}
         />
+        <FormError errors={errors} field="name" />
       </div>
 
       <div className="space-y-1.5">
         <Label htmlFor="client">Client</Label>
         <select
           id="client"
-          required
           value={form.clientId}
           onChange={(e) => setForm({ ...form, clientId: e.target.value })}
-          className="w-full h-9 rounded-md border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 px-2 text-sm"
+          className={cn(
+            "w-full h-10 rounded-lg border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
+            errors.clientId && "border-destructive focus-visible:ring-destructive/30"
+          )}
         >
           {clients.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
           ))}
         </select>
+        <FormError errors={errors} field="clientId" />
       </div>
 
       <div className="space-y-1.5">
@@ -105,7 +166,9 @@ export function NewProjectForm({
           placeholder="ACME-001"
           value={form.code}
           onChange={(e) => setForm({ ...form, code: e.target.value })}
+          className={cn(errors.code && "border-destructive focus-visible:ring-destructive/30")}
         />
+        <FormError errors={errors} field="code" />
       </div>
 
       <div className="space-y-1.5">
@@ -114,7 +177,7 @@ export function NewProjectForm({
           id="visibility"
           value={form.visibility}
           onChange={(e) => setForm({ ...form, visibility: e.target.value as ProjectVisibility })}
-          className="w-full h-9 rounded-md border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 px-2 text-sm"
+          className="w-full h-10 rounded-lg border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           <option value={ProjectVisibility.PUBLIC}>Public — all workspace members</option>
           <option value={ProjectVisibility.PRIVATE}>Private — assigned members only</option>
@@ -123,10 +186,11 @@ export function NewProjectForm({
 
       <div className="space-y-1.5">
         <Label>Project members</Label>
-        <p className="text-xs text-neutral-500 mb-2">
+        <p className="text-xs text-muted-foreground mb-2">
           Assign people and set their project role (Admin can change settings).
         </p>
         <ProjectMembersPicker team={team} value={members} onChange={setMembers} />
+        <FormError errors={errors} field="members" />
       </div>
 
       <div className="space-y-1.5">
@@ -140,40 +204,48 @@ export function NewProjectForm({
                 budgetType: e.target.value as "NONE" | "HOURS" | "AMOUNT",
               })
             }
-            className="h-9 rounded-md border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 px-2 text-sm"
+            className="h-10 rounded-lg border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
           >
             <option value="NONE">None</option>
             <option value="HOURS">Hours</option>
             <option value="AMOUNT">Amount</option>
           </select>
           {form.budgetType === "HOURS" ? (
-            <Input
-              type="number"
-              min={0}
-              step="0.5"
-              placeholder="Hours"
-              value={form.budgetHours}
-              onChange={(e) => setForm({ ...form, budgetHours: e.target.value })}
-            />
+            <div className="flex-1">
+              <Input
+                type="number"
+                min={0}
+                step="0.5"
+                placeholder="Hours"
+                value={form.budgetHours}
+                onChange={(e) => setForm({ ...form, budgetHours: e.target.value })}
+                className={cn(errors.budgetHours && "border-destructive focus-visible:ring-destructive/30")}
+              />
+              <FormError errors={errors} field="budgetHours" />
+            </div>
           ) : null}
           {form.budgetType === "AMOUNT" ? (
-            <Input
-              type="number"
-              min={0}
-              step="0.01"
-              placeholder="Amount"
-              value={form.budgetDollars}
-              onChange={(e) => setForm({ ...form, budgetDollars: e.target.value })}
-            />
+            <div className="flex-1">
+              <Input
+                type="number"
+                min={0}
+                step="0.01"
+                placeholder="Amount"
+                value={form.budgetDollars}
+                onChange={(e) => setForm({ ...form, budgetDollars: e.target.value })}
+                className={cn(errors.budgetDollars && "border-destructive focus-visible:ring-destructive/30")}
+              />
+              <FormError errors={errors} field="budgetDollars" />
+            </div>
           ) : null}
         </div>
       </div>
 
-      <div className="flex gap-2 pt-2">
+      <div className="flex gap-3 pt-4 border-t border-border">
         <Button type="submit" disabled={loading || !form.name.trim() || !form.clientId}>
           {loading ? "Creating…" : "Create project"}
         </Button>
-        <Button type="button" variant="ghost" onClick={() => router.back()}>
+        <Button type="button" variant="outline" onClick={() => router.back()}>
           Cancel
         </Button>
       </div>

@@ -23,9 +23,9 @@ export default async function NewInvoiceFromTimePage() {
 
   if (entries.length === 0) {
     return (
-      <div className="max-w-xl border border-dashed border-neutral-200 dark:border-neutral-800 rounded-lg p-12 text-center">
+      <div className="max-w-xl border border-dashed border-border rounded-lg p-12 text-center">
         <p className="font-medium">No billable time to invoice</p>
-        <p className="text-sm text-neutral-500 mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           Approve some time entries first, then come back to bill them.
         </p>
         <Button asChild className="mt-4"><Link href="/time">Go to Time</Link></Button>
@@ -44,7 +44,7 @@ export default async function NewInvoiceFromTimePage() {
     <div className="max-w-4xl space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Bill time</h1>
-        <p className="text-sm text-neutral-500 mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           Select approved entries and a client; we&apos;ll draft an invoice from them.
         </p>
       </div>

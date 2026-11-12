@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { z } from "zod";
 import { api } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { allocateTax } from "@/domains/billing/tax";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { FormError, type FormErrors } from "@/components/ui/form-error";
 
 type Client = { id: string; name: string; currency: string; taxRateBps: number };
 
@@ -18,12 +21,38 @@ type LineItem = {
   unitPriceStr: string;
 };
 
+type LineItemFieldErrors = {
+  description?: string;
+  quantity?: string;
+  unitPriceStr?: string;
+};
+
 const today = () => new Date().toISOString().slice(0, 10);
 const plusDays = (days: number) => {
   const d = new Date();
   d.setDate(d.getDate() + days);
   return d.toISOString().slice(0, 10);
 };
+
+const invoiceSchema = z.object({
+  clientId: z.string().min(1, "Client is required"),
+  issueDate: z.string().min(1, "Issue date is required"),
+  dueDate: z.string().min(1, "Due date is required"),
+  taxRateStr: z
+    .string()
+    .refine((val) => !isNaN(Number(val)) && Number(val) >= 0, "Must be a valid positive number"),
+  lineItems: z
+    .array(
+      z.object({
+        description: z.string().min(1, "Description is required"),
+        quantity: z.number().min(1, "Quantity must be at least 1"),
+        unitPriceStr: z
+          .string()
+          .refine((val) => !isNaN(Number(val)) && Number(val) >= 0, "Rate must be positive"),
+      })
+    )
+    .min(1, "At least one line item is required"),
+});
 
 export function NewInvoiceForm({ clients }: { clients: Client[] }) {
   const router = useRouter();
@@ -40,6 +69,8 @@ export function NewInvoiceForm({ clients }: { clients: Client[] }) {
   const [lineItems, setLineItems] = useState<LineItem[]>([
     { description: "", quantity: 1, unitPriceStr: "" },
   ]);
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [lineItemErrors, setLineItemErrors] = useState<Record<number, LineItemFieldErrors>>({});
 
   const currency = clients.find((c) => c.id === clientId)?.currency ?? "USD";
 
@@ -67,17 +98,47 @@ export function NewInvoiceForm({ clients }: { clients: Client[] }) {
 
   function removeLine(i: number) {
     setLineItems((items) => items.filter((_, idx) => idx !== i));
+    setLineItemErrors((prev) => {
+      const next = { ...prev };
+      delete next[i];
+      return next;
+    });
   }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const validLines = lineItems.filter(
-      (l) => l.description.trim() && (parseFloat(l.unitPriceStr) || 0) >= 0 && l.quantity > 0
-    );
-    if (validLines.length === 0) {
-      toast.error("Add at least one line item");
+    setErrors({});
+    setLineItemErrors({});
+
+    const result = invoiceSchema.safeParse({
+      clientId,
+      issueDate,
+      dueDate,
+      taxRateStr,
+      lineItems,
+    });
+
+    if (!result.success) {
+      setErrors(result.error.flatten().fieldErrors);
+
+      // Extract per-line-item errors properly from `issues`
+      const itemErrors: Record<number, LineItemFieldErrors> = {};
+      for (const issue of result.error.issues) {
+        if (
+          issue.path[0] === "lineItems" &&
+          typeof issue.path[1] === "number" &&
+          typeof issue.path[2] === "string"
+        ) {
+          const idx = issue.path[1];
+          const field = issue.path[2] as keyof LineItemFieldErrors;
+          itemErrors[idx] ??= {};
+          itemErrors[idx][field] ??= issue.message;
+        }
+      }
+      setLineItemErrors(itemErrors);
       return;
     }
+
     setLoading(true);
     try {
       const res = await api.post<{ id: string }>("/invoices", {
@@ -85,7 +146,7 @@ export function NewInvoiceForm({ clients }: { clients: Client[] }) {
         issueDate,
         dueDate,
         taxRateBps: Math.round((parseFloat(taxRateStr) || 0) * 100),
-        lineItems: validLines.map((l) => ({
+        lineItems: lineItems.map((l) => ({
           description: l.description.trim(),
           quantity: l.quantity,
           unitPriceCents: Math.round((parseFloat(l.unitPriceStr) || 0) * 100),
@@ -102,78 +163,98 @@ export function NewInvoiceForm({ clients }: { clients: Client[] }) {
   const fmt = (cents: number) =>
     new Intl.NumberFormat("en-US", { style: "currency", currency }).format(cents / 100);
 
+  // Global error for the lineItems array itself (e.g. `.min(1)` failure)
+  const lineItemsGlobalErr =
+    errors.lineItems && errors.lineItems.length > 0 ? errors.lineItems[0] : undefined;
+
   return (
     <form onSubmit={onSubmit} className="space-y-6">
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-4">
         <div className="space-y-1.5">
           <Label htmlFor="client">Client</Label>
           <select
             id="client"
-            required
             value={clientId}
             onChange={(e) => {
               setClientId(e.target.value);
               const bps = clients.find((c) => c.id === e.target.value)?.taxRateBps ?? 0;
               setTaxRateStr((bps / 100).toString());
             }}
-            className="w-full h-9 rounded-md border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 px-2 text-sm"
+            className={cn(
+              "w-full h-10 rounded-lg border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
+              errors.clientId && "border-destructive"
+            )}
           >
             {clients.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
             ))}
           </select>
+          <FormError errors={errors} field="clientId" />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="issueDate">Issue date</Label>
           <Input id="issueDate" type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} />
+          <FormError errors={errors} field="issueDate" />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="dueDate">Due date</Label>
           <Input id="dueDate" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+          <FormError errors={errors} field="dueDate" />
         </div>
       </div>
 
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <Label>Line items</Label>
-          <Button type="button" size="sm" variant="ghost" onClick={addLine}>
-            <Plus className="w-3.5 h-3.5" /> Add line
+          <Button type="button" size="sm" variant="outline" onClick={addLine}>
+            <Plus className="w-3.5 h-3.5 mr-1" /> Add line
           </Button>
         </div>
-        <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg overflow-hidden bg-white dark:bg-neutral-950">
+        <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-neutral-50 dark:bg-neutral-900 text-left text-xs text-neutral-500 uppercase tracking-wider">
+            <thead className="bg-muted/50 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
               <tr>
-                <th className="px-3 py-2 font-medium">Description</th>
-                <th className="px-3 py-2 font-medium w-24 text-right">Qty</th>
-                <th className="px-3 py-2 font-medium w-32 text-right">Rate</th>
-                <th className="px-3 py-2 font-medium w-28 text-right">Amount</th>
-                <th className="w-8" />
+                <th className="px-4 py-3 font-medium">Description</th>
+                <th className="px-4 py-3 font-medium w-24 text-right">Qty</th>
+                <th className="px-4 py-3 font-medium w-32 text-right">Rate</th>
+                <th className="px-4 py-3 font-medium w-28 text-right">Amount</th>
+                <th className="w-10" />
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-border">
               {lineItems.map((l, i) => {
-                const amount = Math.round((parseFloat(l.unitPriceStr) || 0) * 100) * (l.quantity || 0);
+                const amount =
+                  Math.round((parseFloat(l.unitPriceStr) || 0) * 100) * (l.quantity || 0);
+                const lineErr = lineItemErrors[i];
                 return (
-                  <tr key={i} className="border-t border-neutral-200 dark:border-neutral-800">
-                    <td className="px-3 py-2">
+                  <tr key={i} className="hover:bg-muted/30 transition-colors">
+                    <td className="px-4 py-3">
                       <Input
                         placeholder="Design work — week 1"
                         value={l.description}
                         onChange={(e) => updateLine(i, { description: e.target.value })}
+                        className={cn(lineErr?.description && "border-destructive")}
                       />
+                      {lineErr?.description && (
+                        <p className="text-xs text-destructive mt-1">{lineErr.description}</p>
+                      )}
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-4 py-3">
                       <Input
                         type="number"
                         min={1}
                         step={1}
                         value={l.quantity}
                         onChange={(e) => updateLine(i, { quantity: parseInt(e.target.value) || 1 })}
-                        className="text-right"
+                        className={cn("text-right", lineErr?.quantity && "border-destructive")}
                       />
+                      {lineErr?.quantity && (
+                        <p className="text-xs text-destructive mt-1">{lineErr.quantity}</p>
+                      )}
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-4 py-3">
                       <Input
                         type="number"
                         min={0}
@@ -181,22 +262,25 @@ export function NewInvoiceForm({ clients }: { clients: Client[] }) {
                         placeholder="0.00"
                         value={l.unitPriceStr}
                         onChange={(e) => updateLine(i, { unitPriceStr: e.target.value })}
-                        className="text-right"
+                        className={cn("text-right", lineErr?.unitPriceStr && "border-destructive")}
                       />
+                      {lineErr?.unitPriceStr && (
+                        <p className="text-xs text-destructive mt-1">{lineErr.unitPriceStr}</p>
+                      )}
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums text-neutral-600 dark:text-neutral-400">
+                    <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
                       {fmt(amount)}
                     </td>
-                    <td className="px-1 py-2">
+                    <td className="px-2 py-3">
                       {lineItems.length > 1 ? (
                         <Button
                           type="button"
-                          size="icon-xs"
+                          size="icon-sm"
                           variant="ghost"
                           onClick={() => removeLine(i)}
                           aria-label="Remove line"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
                         </Button>
                       ) : null}
                     </td>
@@ -206,6 +290,9 @@ export function NewInvoiceForm({ clients }: { clients: Client[] }) {
             </tbody>
           </table>
         </div>
+        {lineItemsGlobalErr && (
+          <p className="text-xs text-destructive font-medium">{lineItemsGlobalErr}</p>
+        )}
       </div>
 
       <div className="flex items-start justify-between gap-6">
@@ -218,32 +305,34 @@ export function NewInvoiceForm({ clients }: { clients: Client[] }) {
             step="0.01"
             value={taxRateStr}
             onChange={(e) => setTaxRateStr(e.target.value)}
+            className={cn(errors.taxRateStr && "border-destructive")}
           />
-          <p className="text-xs text-neutral-500">
+          <FormError errors={errors} field="taxRateStr" />
+          <p className="text-xs text-muted-foreground">
             Prefilled from the client&apos;s default tax rate.
           </p>
         </div>
-        <div className="text-sm space-y-1 w-64">
+        <div className="text-sm space-y-2 w-64 bg-muted/20 p-4 rounded-2xl border border-border">
           <div className="flex justify-between">
-            <span className="text-neutral-500">Subtotal</span>
+            <span className="text-muted-foreground">Subtotal</span>
             <span className="tabular-nums">{fmt(subtotalCents)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-neutral-500">Tax</span>
+            <span className="text-muted-foreground">Tax</span>
             <span className="tabular-nums">{fmt(taxCents)}</span>
           </div>
-          <div className="flex justify-between font-semibold border-t border-neutral-200 dark:border-neutral-800 pt-2 mt-1">
+          <div className="flex justify-between font-semibold border-t border-border pt-2 mt-2">
             <span>Total</span>
             <span className="tabular-nums">{fmt(totalCents)}</span>
           </div>
         </div>
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex gap-3 pt-4 border-t border-border">
         <Button type="submit" disabled={loading}>
           {loading ? "Saving…" : "Save as draft"}
         </Button>
-        <Button type="button" variant="ghost" onClick={() => router.back()}>
+        <Button type="button" variant="outline" onClick={() => router.back()}>
           Cancel
         </Button>
       </div>

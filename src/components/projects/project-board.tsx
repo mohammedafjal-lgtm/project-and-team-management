@@ -42,16 +42,16 @@ function Column({ id, label, count, onAdd, children }: {
   return (
     <div
       ref={setNodeRef}
-      className={`rounded-lg border border-neutral-200 dark:border-neutral-800 bg-neutral-50/60 dark:bg-neutral-900/40 p-3 min-h-[200px] flex flex-col gap-2 transition-colors ${
-        isOver ? "ring-2 ring-neutral-400/60" : ""
+      className={`rounded-lg border border-border bg-muted/40 p-3 min-h-[200px] flex flex-col gap-2 transition-colors ${
+        isOver ? "ring-2 ring-primary/40" : ""
       }`}
     >
       <div className="flex items-center justify-between px-1 mb-1">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium">{label}</span>
-          <span className="text-xs text-neutral-500">{count}</span>
+          <span className="text-xs text-muted-foreground">{count}</span>
         </div>
-        <button onClick={onAdd} className="text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100">
+        <button onClick={onAdd} className="text-muted-foreground hover:text-foreground">
           <Plus className="w-4 h-4" />
         </button>
       </div>
@@ -220,7 +220,7 @@ export function ProjectBoard({
         </div>
         <DragOverlay>
           {dragging ? (
-            <div className="rounded-md border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 p-3 shadow-lg text-sm">
+            <div className="rounded-md border border-border bg-card p-3 shadow-lg text-sm">
               {dragging.title}
             </div>
           ) : null}
@@ -249,7 +249,7 @@ export function ProjectBoard({
             </div>
             <div className="space-y-1.5">
               <Label>Assignees</Label>
-              <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg divide-y divide-neutral-200 dark:divide-neutral-800 max-h-48 overflow-auto">
+              <div className="border border-border rounded-lg divide-y divide-border max-h-48 overflow-auto">
                 {members.map((m) => (
                   <label key={m.id} className="flex items-center gap-2 px-3 py-2 text-sm cursor-pointer">
                     <input
@@ -262,7 +262,7 @@ export function ProjectBoard({
                   </label>
                 ))}
               </div>
-              <p className="text-xs text-neutral-500">Double-click a card to edit assignees.</p>
+              <p className="text-xs text-muted-foreground">Double-click a card to edit assignees.</p>
             </div>
             <Button
               onClick={() => saveEdit.mutate()}

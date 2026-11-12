@@ -37,15 +37,15 @@ export default async function PublicInvoicePage({
     outstanding > 0;
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
+    <div className="min-h-screen bg-background">
       <div className="max-w-3xl mx-auto p-8 space-y-8">
         <header className="flex items-start justify-between">
           <div>
-            <p className="text-xs text-neutral-500 uppercase tracking-wider">{invoice.tenant.name}</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">{invoice.tenant.name}</p>
             <h1 className="text-2xl font-semibold tracking-tight mt-1">
               Invoice #{invoice.number}
             </h1>
-            <p className="text-sm text-neutral-500 mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               {invoice.client.name} · Issued {formatDate(invoice.issueDate)} · Due{" "}
               {formatDate(invoice.dueDate)}
             </p>
@@ -62,14 +62,14 @@ export default async function PublicInvoicePage({
         </header>
 
         {paid === "1" && invoice.status !== "PAID" ? (
-          <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg p-4 text-sm bg-white dark:bg-neutral-950">
+          <div className="border border-border rounded-lg p-4 text-sm bg-card">
             Payment received — this page will update once the webhook confirms it.
           </div>
         ) : null}
 
-        <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg overflow-hidden bg-white dark:bg-neutral-950">
+        <div className="border border-border rounded-lg overflow-hidden bg-card">
           <table className="w-full text-sm">
-            <thead className="bg-neutral-50 dark:bg-neutral-900 text-left text-xs text-neutral-500 uppercase tracking-wider">
+            <thead className="bg-muted/50 text-left text-xs text-muted-foreground uppercase tracking-wider">
               <tr>
                 <th className="px-4 py-2 font-medium">Description</th>
                 <th className="px-4 py-2 font-medium text-right">Qty</th>
@@ -79,7 +79,7 @@ export default async function PublicInvoicePage({
             </thead>
             <tbody>
               {invoice.lineItems.map((l) => (
-                <tr key={l.id} className="border-t border-neutral-200 dark:border-neutral-800">
+                <tr key={l.id} className="border-t border-border">
                   <td className="px-4 py-3">{l.description}</td>
                   <td className="px-4 py-3 text-right">{l.quantity}</td>
                   <td className="px-4 py-3 text-right">
@@ -92,22 +92,22 @@ export default async function PublicInvoicePage({
               ))}
             </tbody>
           </table>
-          <div className="border-t border-neutral-200 dark:border-neutral-800 p-4 flex flex-col items-end gap-1 text-sm">
+          <div className="border-t border-border p-4 flex flex-col items-end gap-1 text-sm">
             <div className="flex w-64 justify-between">
-              <span className="text-neutral-500">Subtotal</span>
+              <span className="text-muted-foreground">Subtotal</span>
               <span>{money(invoice.subtotalCents, invoice.currency)}</span>
             </div>
             <div className="flex w-64 justify-between">
-              <span className="text-neutral-500">Tax</span>
+              <span className="text-muted-foreground">Tax</span>
               <span>{money(invoice.taxCents, invoice.currency)}</span>
             </div>
-            <div className="flex w-64 justify-between font-semibold border-t border-neutral-200 dark:border-neutral-800 pt-2 mt-1">
+            <div className="flex w-64 justify-between font-semibold border-t border-border pt-2 mt-1">
               <span>Total</span>
               <span>{money(invoice.totalCents, invoice.currency)}</span>
             </div>
             {invoice.amountPaidCents > 0 && invoice.amountPaidCents < invoice.totalCents ? (
               <div className="flex w-64 justify-between">
-                <span className="text-neutral-500">Paid</span>
+                <span className="text-muted-foreground">Paid</span>
                 <span>− {money(invoice.amountPaidCents, invoice.currency)}</span>
               </div>
             ) : null}

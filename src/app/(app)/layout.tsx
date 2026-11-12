@@ -29,7 +29,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   });
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
+    <div className="min-h-screen bg-background">
       <Sidebar
         tenantName={tenant.name}
         tenantSlug={tenant.slug}
@@ -37,7 +37,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         tenants={memberships.map((m) => m.tenant)}
         canCreateWorkspace={canCreateWorkspace(session.email)}
       />
-      <div className="pl-60">
+      <div className="pl-[260px]">
         <Topbar />
         <main className="p-8 max-w-6xl mx-auto">{children}</main>
       </div>

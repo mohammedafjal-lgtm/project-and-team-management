@@ -60,7 +60,7 @@ export function WorkspaceNameForm({
           {busy ? "Saving…" : "Save name"}
         </Button>
       ) : (
-        <p className="text-xs text-neutral-500">Only workspace admins can rename this workspace.</p>
+        <p className="text-xs text-muted-foreground">Only workspace admins can rename this workspace.</p>
       )}
     </form>
   );

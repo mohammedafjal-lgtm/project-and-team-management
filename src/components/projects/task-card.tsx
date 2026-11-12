@@ -39,13 +39,13 @@ export function TaskCard({
       {...listeners}
       {...attributes}
       onDoubleClick={onOpen}
-      className={`rounded-md border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-3 shadow-sm text-sm cursor-grab active:cursor-grabbing ${
+      className={`rounded-md border border-border bg-card p-3 shadow-sm text-sm cursor-grab active:cursor-grabbing ${
         isDragging ? "opacity-40" : ""
       }`}
     >
       <p className="font-medium leading-tight">{task.title}</p>
       {task.description ? (
-        <p className="mt-1 text-xs text-neutral-500 line-clamp-2">{task.description}</p>
+        <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{task.description}</p>
       ) : null}
       {assignees.length > 0 ? (
         <div className="mt-2 flex -space-x-1.5">
@@ -53,13 +53,13 @@ export function TaskCard({
             <span
               key={m.id}
               title={m.name ?? m.email}
-              className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-white dark:border-neutral-900 bg-neutral-200 dark:bg-neutral-700 text-[10px] font-medium"
+              className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-card bg-muted text-[10px] font-medium"
             >
               {initials(m)}
             </span>
           ))}
           {assignees.length > 4 ? (
-            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-white dark:border-neutral-900 bg-neutral-100 dark:bg-neutral-800 text-[10px] text-neutral-500">
+            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-card bg-muted text-[10px] text-muted-foreground">
               +{assignees.length - 4}
             </span>
           ) : null}

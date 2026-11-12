@@ -3,13 +3,16 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Role } from "@prisma/client";
-import { Badge } from "@/components/ui/badge";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatDate } from "@/lib/date";
 import { ASSIGNABLE_ROLES } from "@/lib/auth/permissions";
 import { toast } from "sonner";
+import { FormError, type FormErrors } from "@/components/ui/form-error";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { cn } from "@/lib/utils";
 
 type MemberRow = {
   id: string;
@@ -27,6 +30,11 @@ type InviteRow = {
   createdAt: string;
 };
 
+const inviteSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
+  role: z.nativeEnum(Role),
+});
+
 const roleOptions = ASSIGNABLE_ROLES;
 
 export function TeamManager({
@@ -43,9 +51,18 @@ export function TeamManager({
   const [role, setRole] = useState<Role>(Role.MEMBER);
   const [inviting, setInviting] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [errors, setErrors] = useState<FormErrors>({});
 
   async function invite(e: React.FormEvent) {
     e.preventDefault();
+    setErrors({});
+
+    const result = inviteSchema.safeParse({ email, role });
+    if (!result.success) {
+      setErrors(result.error.flatten().fieldErrors);
+      return;
+    }
+
     setInviting(true);
     try {
       const res = await fetch("/api/team/invites", {
@@ -105,31 +122,33 @@ export function TeamManager({
       {canManage && (
         <form
           onSubmit={invite}
-          className="border border-neutral-200 dark:border-neutral-800 rounded-lg bg-white dark:bg-neutral-950 p-4 space-y-3"
+          className="rounded-2xl border border-border bg-card shadow-sm p-6 space-y-4"
         >
           <div>
-            <h2 className="text-sm font-medium">Invite teammate</h2>
-            <p className="text-xs text-neutral-500 mt-0.5">
+            <h2 className="text-lg font-semibold tracking-tight">Invite teammate</h2>
+            <p className="text-sm text-muted-foreground mt-1">
               They’ll receive an email with a link to join this workspace.
             </p>
           </div>
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1 space-y-1.5">
               <Label htmlFor="invite-email">Email</Label>
               <Input
                 id="invite-email"
                 type="email"
-                required
                 placeholder="teammate@company.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                aria-invalid={Boolean(errors.email)}
+                className={cn(errors.email && "border-destructive focus-visible:ring-destructive/30")}
               />
+              <FormError errors={errors} field="email" />
             </div>
-            <div className="sm:w-40 space-y-1.5">
+            <div className="sm:w-48 space-y-1.5">
               <Label htmlFor="invite-role">Role</Label>
               <select
                 id="invite-role"
-                className="flex h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+                className="flex h-10 w-full rounded-lg border border-input bg-transparent px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                 value={role}
                 onChange={(e) => setRole(e.target.value as Role)}
               >
@@ -149,28 +168,28 @@ export function TeamManager({
         </form>
       )}
 
-      <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg overflow-hidden bg-white dark:bg-neutral-950">
+      <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-neutral-50 dark:bg-neutral-900 text-left text-xs text-neutral-500 uppercase tracking-wider">
+          <thead className="bg-muted/50 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
             <tr>
-              <th className="px-4 py-2 font-medium">Name</th>
-              <th className="px-4 py-2 font-medium">Email</th>
-              <th className="px-4 py-2 font-medium">Role</th>
-              <th className="px-4 py-2 font-medium">Status</th>
-              <th className="px-4 py-2 font-medium">Joined</th>
+              <th className="px-6 py-4">Name</th>
+              <th className="px-6 py-4">Email</th>
+              <th className="px-6 py-4">Role</th>
+              <th className="px-6 py-4">Status</th>
+              <th className="px-6 py-4">Joined</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-border">
             {members.map((m) => (
-              <tr key={m.id} className="border-t border-neutral-200 dark:border-neutral-800">
-                <td className="px-4 py-3 font-medium">{m.user.name ?? "—"}</td>
-                <td className="px-4 py-3 text-neutral-600 dark:text-neutral-400">
+              <tr key={m.id} className="hover:bg-muted/30 transition-colors">
+                <td className="px-6 py-4 font-medium">{m.user.name ?? "—"}</td>
+                <td className="px-6 py-4 text-muted-foreground">
                   {m.user.email}
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-6 py-4">
                   {canManage && m.role !== Role.OWNER ? (
                     <select
-                      className="h-7 rounded-md border border-input bg-transparent px-2 text-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+                      className="h-8 rounded-md border border-input bg-transparent px-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
                       value={m.role}
                       disabled={busyId === m.id}
                       onChange={(e) => changeRole(m.id, e.target.value as Role)}
@@ -182,15 +201,13 @@ export function TeamManager({
                       ))}
                     </select>
                   ) : (
-                    <Badge variant="outline">{m.role}</Badge>
+                    <StatusBadge status={m.role} />
                   )}
                 </td>
-                <td className="px-4 py-3">
-                  <Badge variant={m.status === "ACTIVE" ? "default" : "secondary"}>
-                    {m.status}
-                  </Badge>
+                <td className="px-6 py-4">
+                  <StatusBadge status={m.status} />
                 </td>
-                <td className="px-4 py-3 text-neutral-500">
+                <td className="px-6 py-4 text-muted-foreground">
                   {formatDate(new Date(m.createdAt))}
                 </td>
               </tr>
@@ -201,34 +218,35 @@ export function TeamManager({
 
       {canManage && invitations.length > 0 && (
         <div className="space-y-3">
-          <h2 className="text-sm font-medium">Pending invitations</h2>
-          <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg overflow-hidden bg-white dark:bg-neutral-950">
+          <h2 className="text-lg font-semibold tracking-tight">Pending invitations</h2>
+          <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-neutral-50 dark:bg-neutral-900 text-left text-xs text-neutral-500 uppercase tracking-wider">
+              <thead className="bg-muted/50 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 <tr>
-                  <th className="px-4 py-2 font-medium">Email</th>
-                  <th className="px-4 py-2 font-medium">Role</th>
-                  <th className="px-4 py-2 font-medium">Expires</th>
-                  <th className="px-4 py-2 font-medium" />
+                  <th className="px-6 py-4">Email</th>
+                  <th className="px-6 py-4">Role</th>
+                  <th className="px-6 py-4">Expires</th>
+                  <th className="px-6 py-4" />
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-border">
                 {invitations.map((inv) => (
-                  <tr key={inv.id} className="border-t border-neutral-200 dark:border-neutral-800">
-                    <td className="px-4 py-3">{inv.email}</td>
-                    <td className="px-4 py-3">
-                      <Badge variant="outline">{inv.role}</Badge>
+                  <tr key={inv.id} className="hover:bg-muted/30 transition-colors">
+                    <td className="px-6 py-4">{inv.email}</td>
+                    <td className="px-6 py-4">
+                      <StatusBadge status={inv.role} />
                     </td>
-                    <td className="px-4 py-3 text-neutral-500">
+                    <td className="px-6 py-4 text-muted-foreground">
                       {formatDate(new Date(inv.expiresAt))}
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-6 py-4 text-right">
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
                         disabled={busyId === inv.id}
                         onClick={() => revoke(inv.id)}
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
                       >
                         Revoke
                       </Button>

@@ -41,14 +41,14 @@ export function ZohoSettings({
     <section className="space-y-3">
       <div>
         <h2 className="text-sm font-medium">Zoho Books</h2>
-        <p className="text-xs text-neutral-500 mt-1">
+        <p className="text-xs text-muted-foreground mt-1">
           Sync invoice lines, tax, currency, and recorded payments into Zoho Books.
         </p>
       </div>
 
-      <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg p-4 bg-white dark:bg-neutral-950 space-y-3">
+      <div className="border border-border rounded-lg p-4 bg-card space-y-3">
         {!configured ? (
-          <p className="text-sm text-neutral-500">
+          <p className="text-sm text-muted-foreground">
             Zoho OAuth is not configured. Set <code className="text-xs">ZOHO_CLIENT_ID</code> and{" "}
             <code className="text-xs">ZOHO_CLIENT_SECRET</code> in the environment.
           </p>
@@ -57,7 +57,7 @@ export function ZohoSettings({
             <p className="text-sm">
               Connected{organizationId ? ` · org ${organizationId}` : ""}
               {connectedAt ? (
-                <span className="text-neutral-500">
+                <span className="text-muted-foreground">
                   {" "}
                   · since {new Date(connectedAt).toLocaleDateString()}
                 </span>
@@ -76,13 +76,13 @@ export function ZohoSettings({
           </>
         ) : (
           <>
-            <p className="text-sm text-neutral-500">Not connected.</p>
+            <p className="text-sm text-muted-foreground">Not connected.</p>
             {canManage ? (
               <Button asChild>
                 <a href="/api/integrations/zoho/connect">Connect Zoho Books</a>
               </Button>
             ) : (
-              <p className="text-xs text-neutral-500">Ask a workspace admin to connect Zoho Books.</p>
+              <p className="text-xs text-muted-foreground">Ask a workspace admin to connect Zoho Books.</p>
             )}
           </>
         )}

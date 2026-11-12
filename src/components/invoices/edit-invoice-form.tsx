@@ -127,14 +127,14 @@ export function EditInvoiceForm({
               const bps = clients.find((c) => c.id === e.target.value)?.taxRateBps ?? 0;
               setTaxRateStr((bps / 100).toString());
             }}
-            className="w-full h-9 rounded-md border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 px-2 text-sm disabled:opacity-60"
+            className="w-full h-9 rounded-md border border-border bg-card px-2 text-sm disabled:opacity-60"
           >
             {clients.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
           {invoice.lockClient ? (
-            <p className="text-xs text-neutral-500">
+            <p className="text-xs text-muted-foreground">
               Client is locked because this invoice is linked to time entries.
             </p>
           ) : null}
@@ -156,9 +156,9 @@ export function EditInvoiceForm({
             <Plus className="w-3.5 h-3.5" /> Add line
           </Button>
         </div>
-        <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg overflow-hidden bg-white dark:bg-neutral-950">
+        <div className="border border-border rounded-lg overflow-hidden bg-card">
           <table className="w-full text-sm">
-            <thead className="bg-neutral-50 dark:bg-neutral-900 text-left text-xs text-neutral-500 uppercase tracking-wider">
+            <thead className="bg-muted/50 text-left text-xs text-muted-foreground uppercase tracking-wider">
               <tr>
                 <th className="px-3 py-2 font-medium">Description</th>
                 <th className="px-3 py-2 font-medium w-24 text-right">Qty</th>
@@ -171,7 +171,7 @@ export function EditInvoiceForm({
               {lineItems.map((l, i) => {
                 const amount = Math.round((parseFloat(l.unitPriceStr) || 0) * 100) * (l.quantity || 0);
                 return (
-                  <tr key={i} className="border-t border-neutral-200 dark:border-neutral-800">
+                  <tr key={i} className="border-t border-border">
                     <td className="px-3 py-2">
                       <Input
                         placeholder="Design work — week 1"
@@ -200,7 +200,7 @@ export function EditInvoiceForm({
                         className="text-right"
                       />
                     </td>
-                    <td className="px-3 py-2 text-right tabular-nums text-neutral-600 dark:text-neutral-400">
+                    <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">
                       {fmt(amount)}
                     </td>
                     <td className="px-1 py-2">
@@ -238,14 +238,14 @@ export function EditInvoiceForm({
         </div>
         <div className="text-sm space-y-1 w-64">
           <div className="flex justify-between">
-            <span className="text-neutral-500">Subtotal</span>
+            <span className="text-muted-foreground">Subtotal</span>
             <span className="tabular-nums">{fmt(subtotalCents)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-neutral-500">Tax</span>
+            <span className="text-muted-foreground">Tax</span>
             <span className="tabular-nums">{fmt(taxCents)}</span>
           </div>
-          <div className="flex justify-between font-semibold border-t border-neutral-200 dark:border-neutral-800 pt-2 mt-1">
+          <div className="flex justify-between font-semibold border-t border-border pt-2 mt-1">
             <span>Total</span>
             <span className="tabular-nums">{fmt(totalCents)}</span>
           </div>

@@ -2,9 +2,9 @@ import Link from "next/link";
 import { getTenantContext } from "@/lib/tenancy/resolve";
 import { prisma } from "@/lib/db/prisma";
 import { money } from "@/lib/money";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/date";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 export default async function InvoicesPage() {
   const ctx = await getTenantContext();
@@ -18,8 +18,8 @@ export default async function InvoicesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Invoices</h1>
-          <p className="text-sm text-neutral-500 mt-1">{invoices.length} total</p>
+          <h1 className="text-2xl font-bold tracking-tight">Invoices</h1>
+          <p className="text-sm text-muted-foreground mt-1">{invoices.length} total</p>
         </div>
         <Button asChild>
           <Link href="/invoices/new">New invoice</Link>
@@ -27,9 +27,9 @@ export default async function InvoicesPage() {
       </div>
 
       {invoices.length === 0 ? (
-        <div className="border border-dashed border-neutral-200 dark:border-neutral-800 rounded-lg p-12 text-center">
+        <div className="rounded-2xl border border-dashed border-border bg-muted/20 p-12 text-center">
           <p className="font-medium">No invoices yet</p>
-          <p className="text-sm text-neutral-500 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Create your first invoice to start billing your clients.
           </p>
           <Button asChild className="mt-4">
@@ -37,31 +37,31 @@ export default async function InvoicesPage() {
           </Button>
         </div>
       ) : (
-        <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg overflow-hidden bg-white dark:bg-neutral-950">
+        <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-neutral-50 dark:bg-neutral-900 text-left text-xs text-neutral-500 uppercase tracking-wider">
+            <thead className="bg-muted/50 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
               <tr>
-                <th className="px-4 py-2 font-medium">Number</th>
-                <th className="px-4 py-2 font-medium">Client</th>
-                <th className="px-4 py-2 font-medium">Status</th>
-                <th className="px-4 py-2 font-medium">Due</th>
-                <th className="px-4 py-2 font-medium text-right">Total</th>
+                <th className="px-6 py-4">Number</th>
+                <th className="px-6 py-4">Client</th>
+                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4">Due</th>
+                <th className="px-6 py-4 text-right">Total</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-border">
               {invoices.map((i) => (
-                <tr key={i.id} className="border-t border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-900/60">
-                  <td className="px-4 py-3">
+                <tr key={i.id} className="hover:bg-muted/30 transition-colors">
+                  <td className="px-6 py-4">
                     <Link href={`/invoices/${i.id}`} className="font-medium hover:underline">
                       #{i.number}
                     </Link>
                   </td>
-                  <td className="px-4 py-3">{i.client.name}</td>
-                  <td className="px-4 py-3">
-                    <Badge variant="outline">{i.status}</Badge>
+                  <td className="px-6 py-4 text-muted-foreground">{i.client.name}</td>
+                  <td className="px-6 py-4">
+                    <StatusBadge status={i.status} />
                   </td>
-                  <td className="px-4 py-3">{formatDate(i.dueDate)}</td>
-                  <td className="px-4 py-3 text-right">{money(i.totalCents, i.currency)}</td>
+                  <td className="px-6 py-4 text-muted-foreground">{formatDate(i.dueDate)}</td>
+                  <td className="px-6 py-4 text-right tabular-nums">{money(i.totalCents, i.currency)}</td>
                 </tr>
               ))}
             </tbody>

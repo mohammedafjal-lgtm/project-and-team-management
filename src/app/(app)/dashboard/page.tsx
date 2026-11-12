@@ -3,6 +3,10 @@ import { prisma } from "@/lib/db/prisma";
 import { money } from "@/lib/money";
 import { visibleProjectWhere } from "@/domains/projects/project-access";
 import type { TenantContext } from "@/lib/tenancy/context";
+import { StatCard } from "@/components/ui/stat-card";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { FolderKanban, Receipt, Clock, Banknote } from "lucide-react";
+import { formatDate } from "@/lib/date";
 
 async function metrics(ctx: TenantContext) {
   const tenantId = ctx.tenantId;
@@ -29,31 +33,71 @@ async function metrics(ctx: TenantContext) {
   };
 }
 
-function Card({ label, value, hint }: { label: string; value: string; hint?: string }) {
-  return (
-    <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg p-5 bg-white dark:bg-neutral-950">
-      <p className="text-xs text-neutral-500 uppercase tracking-wider">{label}</p>
-      <p className="mt-2 text-2xl font-semibold tracking-tight tabular-nums">{value}</p>
-      {hint ? <p className="mt-1 text-xs text-neutral-500">{hint}</p> : null}
-    </div>
-  );
-}
-
 export default async function DashboardPage() {
   const ctx = await getTenantContext();
   const m = await metrics(ctx);
 
+  // Fetch recent invoices for the table
+  const recentInvoices = await prisma.invoice.findMany({
+    where: { tenantId: ctx.tenantId },
+    include: { client: true },
+    orderBy: { createdAt: "desc" },
+    take: 5,
+  });
+
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-        <p className="text-sm text-neutral-500 mt-1">{ctx.tenantSlug}</p>
+        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+        <p className="text-sm text-muted-foreground mt-1">Overview of your workspace</p>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card label="Active projects" value={String(m.projects)} />
-        <Card label="Outstanding" value={money(m.outstandingCents)} hint="Unpaid invoices" />
-        <Card label="Hours this week" value={(m.minutesThisWeek / 60).toFixed(1)} hint="All users" />
-        <Card label="Revenue (ledger)" value={money(m.revenueCents)} hint="From account 4000" />
+      
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatCard label="Active Projects" value={String(m.projects)} icon={FolderKanban} color="teal" />
+        <StatCard label="Outstanding" value={money(m.outstandingCents)} hint="Unpaid invoices" icon={Receipt} color="red" />
+        <StatCard label="Hours this week" value={(m.minutesThisWeek / 60).toFixed(1)} hint="All users" icon={Clock} color="orange" />
+        <StatCard label="Revenue (ledger)" value={money(m.revenueCents)} hint="From account 4000" icon={Banknote} color="green" />
+      </div>
+
+      <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-border flex items-center justify-between bg-muted/20">
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight">Recent Invoices</h2>
+            <p className="text-sm text-muted-foreground">Latest invoices generated</p>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              <tr>
+                <th className="px-6 py-4">Number</th>
+                <th className="px-6 py-4">Client</th>
+                <th className="px-6 py-4">Status</th>
+                <th className="px-6 py-4">Date</th>
+                <th className="px-6 py-4 text-right">Total</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {recentInvoices.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground">
+                    No invoices yet.
+                  </td>
+                </tr>
+              ) : (
+                recentInvoices.map((inv) => (
+                  <tr key={inv.id} className="hover:bg-muted/30 transition-colors">
+                    <td className="px-6 py-4 font-medium">#{inv.number}</td>
+                    <td className="px-6 py-4 text-muted-foreground">{inv.client.name}</td>
+                    <td className="px-6 py-4"><StatusBadge status={inv.status} /></td>
+                    <td className="px-6 py-4 text-muted-foreground">{formatDate(inv.issueDate)}</td>
+                    <td className="px-6 py-4 text-right tabular-nums">{money(inv.totalCents, inv.currency)}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

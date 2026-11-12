@@ -14,9 +14,9 @@ export default async function NewInvoicePage() {
 
   if (clients.length === 0) {
     return (
-      <div className="max-w-xl border border-dashed border-neutral-200 dark:border-neutral-800 rounded-lg p-12 text-center">
+      <div className="max-w-xl border border-dashed border-border rounded-lg p-12 text-center">
         <p className="font-medium">Create a client first</p>
-        <p className="text-sm text-neutral-500 mt-1">Invoices are billed to a client.</p>
+        <p className="text-sm text-muted-foreground mt-1">Invoices are billed to a client.</p>
         <Button asChild className="mt-4"><Link href="/clients/new">New client</Link></Button>
       </div>
     );
@@ -27,7 +27,7 @@ export default async function NewInvoicePage() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">New invoice</h1>
-          <p className="text-sm text-neutral-500 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Draft an invoice and issue it when you are ready.
           </p>
         </div>

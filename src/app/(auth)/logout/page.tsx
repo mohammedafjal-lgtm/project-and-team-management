@@ -8,5 +8,5 @@ export default function LogoutPage() {
       .then((r) => r.json())
       .then((d) => { window.location.href = d.redirectTo; });
   }, []);
-  return <div className="text-sm text-neutral-500">Signing out…</div>;
+  return <div className="text-sm text-muted-foreground">Signing out…</div>;
 }

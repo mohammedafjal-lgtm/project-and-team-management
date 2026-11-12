@@ -25,14 +25,14 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
     <div className="space-y-8 max-w-3xl">
       <div className="flex items-start justify-between gap-6">
         <div>
-          <p className="text-xs text-neutral-500 uppercase tracking-wider">Invoice</p>
+          <p className="text-xs text-muted-foreground uppercase tracking-wider">Invoice</p>
           <h1 className="text-2xl font-semibold tracking-tight">#{invoice.number}</h1>
-          <p className="text-sm text-neutral-500 mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             {invoice.client.name} · {invoice.status} · due{" "}
             {formatDate(invoice.dueDate)}
           </p>
           {invoice.zohoInvoiceId ? (
-            <p className="mt-2 text-xs text-neutral-500">
+            <p className="mt-2 text-xs text-muted-foreground">
               Linked Zoho invoice: {invoice.zohoInvoiceNumber ?? invoice.zohoInvoiceId}
             </p>
           ) : null}
@@ -41,7 +41,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
               href={`/i/${invoice.publicToken}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-block mt-2 text-xs text-neutral-500 underline underline-offset-4 hover:text-neutral-900 dark:hover:text-neutral-100"
+              className="inline-block mt-2 text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
             >
               Public link
             </a>
@@ -60,9 +60,9 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
         />
       </div>
 
-      <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg overflow-hidden bg-white dark:bg-neutral-950">
+      <div className="border border-border rounded-lg overflow-hidden bg-card">
         <table className="w-full text-sm">
-          <thead className="bg-neutral-50 dark:bg-neutral-900 text-left text-xs text-neutral-500 uppercase tracking-wider">
+          <thead className="bg-muted/50 text-left text-xs text-muted-foreground uppercase tracking-wider">
             <tr>
               <th className="px-4 py-2 font-medium">Description</th>
               <th className="px-4 py-2 font-medium text-right">Qty</th>
@@ -72,7 +72,7 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
           </thead>
           <tbody>
             {invoice.lineItems.map((l) => (
-              <tr key={l.id} className="border-t border-neutral-200 dark:border-neutral-800">
+              <tr key={l.id} className="border-t border-border">
                 <td className="px-4 py-3">{l.description}</td>
                 <td className="px-4 py-3 text-right">{l.quantity}</td>
                 <td className="px-4 py-3 text-right">{money(l.unitPriceCents, invoice.currency)}</td>
@@ -81,28 +81,28 @@ export default async function InvoiceDetailPage({ params }: { params: Promise<{ 
             ))}
           </tbody>
         </table>
-        <div className="border-t border-neutral-200 dark:border-neutral-800 p-4 flex flex-col items-end gap-1 text-sm">
+        <div className="border-t border-border p-4 flex flex-col items-end gap-1 text-sm">
           <div className="flex w-56 justify-between">
-            <span className="text-neutral-500">Subtotal</span>
+            <span className="text-muted-foreground">Subtotal</span>
             <span>{money(invoice.subtotalCents, invoice.currency)}</span>
           </div>
           <div className="flex w-56 justify-between">
-            <span className="text-neutral-500">Tax</span>
+            <span className="text-muted-foreground">Tax</span>
             <span>{money(invoice.taxCents, invoice.currency)}</span>
           </div>
-          <div className="flex w-56 justify-between font-semibold border-t border-neutral-200 dark:border-neutral-800 pt-2 mt-1">
+          <div className="flex w-56 justify-between font-semibold border-t border-border pt-2 mt-1">
             <span>Total</span>
             <span>{money(invoice.totalCents, invoice.currency)}</span>
           </div>
           {invoice.amountPaidCents > 0 ? (
             <>
               <div className="flex w-56 justify-between">
-                <span className="text-neutral-500">Paid</span>
+                <span className="text-muted-foreground">Paid</span>
                 <span>− {money(invoice.amountPaidCents, invoice.currency)}</span>
               </div>
               {invoice.amountPaidCents < invoice.totalCents ? (
                 <div className="flex w-56 justify-between font-medium">
-                  <span className="text-neutral-500">Outstanding</span>
+                  <span className="text-muted-foreground">Outstanding</span>
                   <span>{money(invoice.totalCents - invoice.amountPaidCents, invoice.currency)}</span>
                 </div>
               ) : null}

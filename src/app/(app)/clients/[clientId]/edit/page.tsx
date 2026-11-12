@@ -21,9 +21,9 @@ export default async function EditClientPage({ params }: { params: Promise<{ cli
   return (
     <div className="max-w-xl space-y-6">
       <div>
-        <p className="text-xs text-neutral-500 uppercase tracking-wider">Client</p>
+        <p className="text-xs text-muted-foreground uppercase tracking-wider">Client</p>
         <h1 className="text-2xl font-semibold tracking-tight">Edit {client.name}</h1>
-        <p className="text-sm text-neutral-500 mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           Update the name, billing details, and default rates used on new work.
         </p>
       </div>
@@ -42,7 +42,7 @@ export default async function EditClientPage({ params }: { params: Promise<{ cli
         />
       ) : (
         <div className="space-y-3">
-          <p className="text-sm text-neutral-500">Only managers can edit client details.</p>
+          <p className="text-sm text-muted-foreground">Only managers can edit client details.</p>
           <Button variant="outline" asChild>
             <Link href={`/clients/${client.id}`}>Back to client</Link>
           </Button>

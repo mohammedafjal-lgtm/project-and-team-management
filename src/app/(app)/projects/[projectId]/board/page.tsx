@@ -37,7 +37,7 @@ export default async function BoardPage({ params }: { params: Promise<{ projectI
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-xs text-neutral-500 uppercase tracking-wider">{project.client.name}</p>
+          <p className="text-xs text-muted-foreground uppercase tracking-wider">{project.client.name}</p>
           <h1 className="text-2xl font-semibold tracking-tight">{project.name}</h1>
           <div className="mt-2 flex gap-2">
             <Badge variant="outline">{project.visibility}</Badge>

@@ -33,32 +33,32 @@ export default async function BookkeepingPage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Chart of accounts</h1>
-          <p className="text-sm text-neutral-500 mt-1">Live balances from the double-entry ledger</p>
+          <h1 className="text-2xl font-bold tracking-tight">Chart of accounts</h1>
+          <p className="text-sm text-muted-foreground mt-1">Live balances from the double-entry ledger</p>
         </div>
-        <div className={`px-3 py-1.5 rounded-md text-xs font-medium ${balanced ? "bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300" : "bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300"}`}>
+        <div className={`px-4 py-2 rounded-xl text-xs font-semibold shadow-sm border ${balanced ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-900" : "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/30 dark:text-rose-400 dark:border-rose-900"}`}>
           {balanced ? "Balanced" : "Out of balance"}
         </div>
       </div>
-      <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg overflow-hidden bg-white dark:bg-neutral-950">
+      <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-neutral-50 dark:bg-neutral-900 text-left text-xs text-neutral-500 uppercase tracking-wider">
+          <thead className="bg-muted/50 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
             <tr>
-              <th className="px-4 py-2 font-medium">Code</th>
-              <th className="px-4 py-2 font-medium">Name</th>
-              <th className="px-4 py-2 font-medium">Type</th>
-              <th className="px-4 py-2 font-medium text-right">Balance</th>
+              <th className="px-6 py-4">Code</th>
+              <th className="px-6 py-4">Name</th>
+              <th className="px-6 py-4">Type</th>
+              <th className="px-6 py-4 text-right">Balance</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-border">
             {accounts.length === 0 ? (
-              <tr><td colSpan={4} className="px-4 py-8 text-center text-neutral-500">No accounts yet. Issue an invoice to create the system chart of accounts.</td></tr>
+              <tr><td colSpan={4} className="px-6 py-8 text-center text-muted-foreground">No accounts yet. Issue an invoice to create the system chart of accounts.</td></tr>
             ) : accounts.map((a) => (
-              <tr key={a.id} className="border-t border-neutral-200 dark:border-neutral-800">
-                <td className="px-4 py-3 font-mono text-xs">{a.code}</td>
-                <td className="px-4 py-3">{a.name}</td>
-                <td className="px-4 py-3 text-neutral-500">{a.type}</td>
-                <td className="px-4 py-3 text-right">{money(a.balanceCents)}</td>
+              <tr key={a.id} className="hover:bg-muted/30 transition-colors">
+                <td className="px-6 py-4 font-mono text-xs text-muted-foreground">{a.code}</td>
+                <td className="px-6 py-4 font-medium">{a.name}</td>
+                <td className="px-6 py-4 text-muted-foreground">{a.type}</td>
+                <td className="px-6 py-4 text-right tabular-nums font-medium">{money(a.balanceCents)}</td>
               </tr>
             ))}
           </tbody>

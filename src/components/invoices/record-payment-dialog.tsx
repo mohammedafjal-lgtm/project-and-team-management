@@ -80,7 +80,7 @@ export function RecordPaymentDialog({
               onChange={(e) => setAmountStr(e.target.value)}
               autoFocus
             />
-            <p className="text-xs text-neutral-500">
+            <p className="text-xs text-muted-foreground">
               Outstanding: {(outstandingCents / 100).toFixed(2)} {currency}
             </p>
           </div>

@@ -40,9 +40,9 @@ export function ProjectMembersPicker({
   const assignable = team.filter((m) => m.role !== "CLIENT");
 
   return (
-    <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg divide-y divide-neutral-200 dark:divide-neutral-800 max-h-64 overflow-auto">
+    <div className="border border-border rounded-lg divide-y divide-border max-h-64 overflow-auto">
       {assignable.length === 0 ? (
-        <p className="px-3 py-4 text-sm text-neutral-500">No team members available.</p>
+        <p className="px-3 py-4 text-sm text-muted-foreground">No team members available.</p>
       ) : (
         assignable.map((m) => {
           const checked = selected.has(m.id);
@@ -52,17 +52,17 @@ export function ProjectMembersPicker({
                 type="checkbox"
                 checked={checked}
                 onChange={() => toggle(m.id)}
-                className="rounded border-neutral-300"
+                className="rounded border-input"
               />
               <div className="flex-1 min-w-0">
                 <p className="font-medium truncate">{m.name ?? m.email}</p>
-                <p className="text-xs text-neutral-500 truncate">{m.email}</p>
+                <p className="text-xs text-muted-foreground truncate">{m.email}</p>
               </div>
               {checked ? (
                 <select
                   value={selected.get(m.id)}
                   onChange={(e) => setRole(m.id, e.target.value as ProjectRole)}
-                  className="h-8 rounded-md border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 px-2 text-xs"
+                  className="h-8 rounded-md border border-border bg-card px-2 text-xs"
                 >
                   <option value={ProjectRole.ADMIN}>Admin</option>
                   <option value={ProjectRole.MEMBER}>Member</option>
